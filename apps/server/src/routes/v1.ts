@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { requireAuth } from "../middleware/session";
+import { doctorsRouter } from "../modules/doctors/routes";
 
 const v1Router = Router();
 
@@ -9,6 +10,7 @@ const v1Router = Router();
 // per-route (requireCapability) as feature routers mount here.
 v1Router.use(requireAuth);
 
-// Feature routers (doctors, patients, dashboard, team) mount here.
+// Feature routers
+v1Router.use("/doctors", doctorsRouter);
 
 export default v1Router;

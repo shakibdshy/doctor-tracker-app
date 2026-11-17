@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@doctor-tracker-app/auth": "workspace:*",
+    "@doctor-tracker-app/db": "workspace:*",
     "@doctor-tracker-app/ui": "workspace:*",
     "@hookform/resolvers": "^7.0.7",
     "@swc/helpers": "^0.5.24",
+    "@tanstack/react-query": "^5.107.2",
     "@varlock/nextjs-integration": "2.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "better-auth": "catalog:",

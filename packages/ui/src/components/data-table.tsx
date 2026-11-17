@@ -11,6 +11,7 @@ import {
   type RowData,
 } from "@tanstack/react-table";
 import { CircleAlertIcon, InboxIcon, RefreshCcwIcon } from "lucide-react";
+import * as React from "react";
 
 import { Button } from "./button";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "./empty";
@@ -147,13 +148,18 @@ type DataTableProps<TData extends RowData> = DataTableStateProps & {
   getRowId?: (row: TData, index: number) => string;
   className?: string;
   onRowClick?: (row: TData) => void;
+  /**
+   * Mobile-first card rendering: when provided, rows below the `md`
+   * breakpoint render as cards instead of the horizontally scrolling table.
+   */
+  renderCard?: (row: TData) => React.ReactNode;
 };
 
 /**
  * The shared list table for the portal: TanStack Table rendering over
  * shadcn primitives with the skeleton / empty / error-with-retry patterns
- * built in. Narrow viewports scroll horizontally (the table primitive's
- * container owns the overflow).
+ * built in. Without a card renderer, narrow viewports scroll horizontally
+ * (the table primitive's container owns the overflow).
  */
 function DataTable<TData extends RowData>({
   columns,
@@ -161,6 +167,7 @@ function DataTable<TData extends RowData>({
   getRowId,
   className,
   onRowClick,
+  renderCard,
   isLoading,
   error,
   onRetry,
@@ -187,8 +194,7 @@ function DataTable<TData extends RowData>({
     return <DataTableEmpty message={emptyMessage} />;
   }
 
-  return (
-    <div className={cn("w-full", className)}>
+  const tableMarkup = (
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -233,6 +239,24 @@ function DataTable<TData extends RowData>({
           })}
         </TableBody>
       </Table>
+  );
+
+  return (
+    <div className={cn("w-full", className)}>
+      {renderCard ? (
+        <>
+          <div className="hidden md:block">{tableMarkup}</div>
+          <div className="flex flex-col gap-3 md:hidden">
+            {rows.map((row) => (
+              <React.Fragment key={row.id}>
+                {renderCard(row.original)}
+              </React.Fragment>
+            ))}
+          </div>
+        </>
+      ) : (
+        tableMarkup
+      )}
     </div>
   );
 }

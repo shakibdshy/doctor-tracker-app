@@ -21,7 +21,10 @@ function isDuplicateKeyError(
 }
 
 function duplicateKeyMessage(err: { keyValue?: Record<string, unknown> }): string {
-  const keys = Object.keys(err.keyValue ?? {});
+  // Shadow fields (nameLower, emailLower…) read better without the suffix.
+  const keys = Object.keys(err.keyValue ?? {}).map((key) =>
+    key.endsWith("Lower") ? key.slice(0, -"Lower".length) : key,
+  );
   if (keys.length > 0) {
     return `A record with the same ${keys.join(" and ")} already exists`;
   }

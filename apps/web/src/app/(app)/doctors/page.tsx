@@ -1,6 +1,6 @@
 import { requireSession } from "@/lib/session";
 
-import DoctorsDemo from "./doctors-demo";
+import DoctorsView from "./doctors-view";
 
 export const metadata = { title: "Doctors — Doctor Tracker" };
 
@@ -12,11 +12,10 @@ export default async function DoctorsPage() {
       <header className="mb-4">
         <h1 className="text-2xl font-semibold">Doctors</h1>
         <p className="text-muted-foreground text-sm">
-          Design-system demo — the live roster connects in the doctor-roster
-          ticket.
+          The doctor roster — search, filter, and manage from here.
         </p>
       </header>
-      <DoctorsDemo role={user.role} />
+      <DoctorsView role={user.role} />
     </div>
   );
 }

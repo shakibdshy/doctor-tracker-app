@@ -8,12 +8,15 @@
     "bootstrap": "bun run src/bootstrap.ts",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
+    "seed": "bun run src/seed.ts",
     "start": "bun run dist/index.mjs",
-    "env:generate": "varlock codegen"
+    "env:generate": "varlock codegen",
+    "test": "bun test"
   },
   "dependencies": {
     "@doctor-tracker-app/auth": "workspace:*",
     "@doctor-tracker-app/db": "workspace:*",
+    "@faker-js/faker": "^10.6.0",
     "better-auth": "catalog:",
     "compression": "^1.8.2",
     "cors": "^2.8.6",
@@ -29,6 +32,7 @@
     "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "mongodb-memory-server": "^11.3.0",
     "tsdown": "^0.23.7",
     "typescript": "catalog:"
   }

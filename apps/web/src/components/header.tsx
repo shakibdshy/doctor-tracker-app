@@ -1,6 +1,7 @@
 "use client";
 
 import { can, type Capability } from "@doctor-tracker-app/auth/policy";
+import { cn } from "@doctor-tracker-app/ui/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Route } from "next";
@@ -27,12 +28,17 @@ export default function Header() {
 
   return (
     <header className="border-b">
-      <div className="flex flex-row items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-base font-semibold">
-            Doctor Tracker
-          </Link>
-          <nav aria-label="Main navigation" className="flex gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2">
+        <Link href="/dashboard" className="text-base font-semibold whitespace-nowrap">
+          Doctor Tracker
+        </Link>
+        {/* Below sm the nav drops to its own edge-to-edge, horizontally
+            scrollable row so the header never widens the document. */}
+        <nav
+          aria-label="Main navigation"
+          className="order-last w-full overflow-x-auto sm:order-none sm:w-auto sm:overflow-visible"
+        >
+          <div className="flex gap-1">
             {links.map(({ href, label }) => {
               const active = pathname.startsWith(href);
               return (
@@ -40,18 +46,19 @@ export default function Header() {
                   key={href}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-sm whitespace-nowrap transition-colors",
                     active
                       ? "bg-accent font-medium"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                  }`}
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                  )}
                 >
                   {label}
                 </Link>
               );
             })}
-          </nav>
-        </div>
+          </div>
+        </nav>
         <div className="flex items-center gap-2">
           <ModeToggle />
           <UserMenu />

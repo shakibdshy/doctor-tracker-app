@@ -37,11 +37,11 @@ function ListPagination({
         className,
       )}
     >
-      <p className="text-muted-foreground text-xs" aria-live="polite">
+      <p className="text-muted-foreground text-[13px] tabular-nums" aria-live="polite">
         {totalLabel}
       </p>
       <div className="flex items-center gap-2">
-        <span className="text-muted-foreground text-xs tabular-nums">
+        <span className="text-muted-foreground text-[13px] tabular-nums">
           Page {page} of {totalPages}
         </span>
         <div className="flex items-center gap-1">

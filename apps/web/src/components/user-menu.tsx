@@ -11,16 +11,19 @@ import {
   DropdownMenuTrigger,
 } from "@doctor-tracker-app/ui/components/dropdown-menu";
 import { Skeleton } from "@doctor-tracker-app/ui/components/skeleton";
+import { ChevronDownIcon, LogOutIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+
+import { initialsOf } from "./nav-items";
 
 export default function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
-    return <Skeleton className="h-9 w-24" />;
+    return <Skeleton className="h-9 w-32" />;
   }
 
   if (!session) {
@@ -31,10 +34,19 @@ export default function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" />}>
-        {session.user.name}
+      <DropdownMenuTrigger
+        render={<Button variant="outline" className="max-w-40 gap-2 pl-1.5" />}
+      >
+        <span
+          aria-hidden
+          className="bg-secondary text-secondary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+        >
+          {initialsOf(session.user.name)}
+        </span>
+        <span className="truncate">{session.user.name}</span>
+        <ChevronDownIcon aria-hidden className="text-muted-foreground size-3.5" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-card">
+      <DropdownMenuContent align="end" className="min-w-52 bg-card">
         <DropdownMenuGroup>
           <DropdownMenuLabel>My account</DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -56,6 +68,7 @@ export default function UserMenu() {
               });
             }}
           >
+            <LogOutIcon aria-hidden />
             Sign out
           </DropdownMenuItem>
         </DropdownMenuGroup>

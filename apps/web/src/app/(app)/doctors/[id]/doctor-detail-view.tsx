@@ -71,7 +71,7 @@ export default function DoctorDetailView({
         cell: (ctx) => (
           <div className="min-w-0">
             <span className="font-medium">{ctx.row.original.name}</span>
-            <p className="text-muted-foreground text-xs">{ctx.row.original.phone}</p>
+            <p className="text-muted-foreground font-mono text-xs">{ctx.row.original.phone}</p>
           </div>
         ),
       },
@@ -91,7 +91,7 @@ export default function DoctorDetailView({
         accessorKey: "dateOfBirth",
         header: "Born",
         cell: (ctx) => (
-          <span className="text-muted-foreground tabular-nums">
+          <span className="font-mono text-[13px] text-muted-foreground tabular-nums">
             {dateFormatter.format(new Date(ctx.row.original.dateOfBirth))}
           </span>
         ),
@@ -100,7 +100,7 @@ export default function DoctorDetailView({
         accessorKey: "createdAt",
         header: "Added",
         cell: (ctx) => (
-          <span className="text-muted-foreground tabular-nums">
+          <span className="font-mono text-[13px] text-muted-foreground tabular-nums">
             {dateFormatter.format(new Date(ctx.row.original.createdAt))}
           </span>
         ),
@@ -140,7 +140,7 @@ export default function DoctorDetailView({
       <div className="flex flex-col gap-4">
         <Link
           href="/doctors"
-          className="text-muted-foreground flex items-center gap-1 text-sm hover:underline"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors"
         >
           <ArrowLeftIcon className="size-3.5" />
           Back to doctors
@@ -161,7 +161,7 @@ export default function DoctorDetailView({
       <div>
         <Link
           href="/doctors"
-          className="text-muted-foreground flex items-center gap-1 text-sm hover:underline"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors"
         >
           <ArrowLeftIcon className="size-3.5" />
           Back to doctors
@@ -171,15 +171,30 @@ export default function DoctorDetailView({
       {doctorQuery.isLoading ? (
         <Card className="h-24 animate-pulse" />
       ) : doctor ? (
-        <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">{doctor.name}</h2>
-              <Badge variant="secondary">{doctor.specialization}</Badge>
+        <Card className="flex flex-row flex-wrap items-center justify-between gap-4 p-5">
+          <div className="flex min-w-0 items-center gap-4">
+            <span
+              aria-hidden
+              className="bg-secondary text-secondary-foreground font-display flex size-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold"
+            >
+              {doctor.name
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0]!.toUpperCase())
+                .join("")}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+                  {doctor.name}
+                </h2>
+                <Badge variant="secondary">{doctor.specialization}</Badge>
+              </div>
+              <p className="text-muted-foreground mt-1 truncate font-mono text-[13px]">
+                {doctor.hospital} · {doctor.phone} · {doctor.email}
+              </p>
             </div>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {doctor.hospital} · {doctor.phone} · {doctor.email}
-            </p>
           </div>
           {canCreate ? (
             <Button onClick={() => setAddOpen(true)}>
@@ -190,7 +205,13 @@ export default function DoctorDetailView({
         </Card>
       ) : null}
 
-      <div className="rounded-lg border bg-card p-2">
+      <div className="bg-card shadow-card overflow-hidden rounded-xl ring-1 ring-foreground/8 max-lg:overflow-visible max-lg:bg-transparent max-lg:shadow-none max-lg:ring-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3 max-lg:border-b-0 max-lg:px-0 max-lg:pt-0 max-lg:pb-3">
+          <p className="text-[13px] font-medium">Assigned patients</p>
+          <p className="text-muted-foreground text-[13px] tabular-nums">
+            {patientsMeta ? `${patientsMeta.total} total` : "Loading…"}
+          </p>
+        </div>
         <DataTable
           columns={columns}
           data={patientsQuery.data?.data ?? []}
@@ -214,7 +235,7 @@ export default function DoctorDetailView({
           )}
         />
         {patientsMeta && patientsMeta.total > 0 ? (
-          <div className="border-t p-3">
+          <div className="border-t border-border/70 px-4 py-3 max-lg:border-t-0 max-lg:px-0 max-lg:pt-3 max-lg:pb-0">
             <ListPagination
               page={patientsMeta.page}
               totalPages={patientsMeta.totalPages}

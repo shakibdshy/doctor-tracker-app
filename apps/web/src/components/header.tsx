@@ -1,25 +1,21 @@
 "use client";
 
-import { can, type Capability } from "@doctor-tracker-app/auth/policy";
+import { can } from "@doctor-tracker-app/auth/policy";
 import { cn } from "@doctor-tracker-app/ui/lib/utils";
+import { StethoscopeIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Route } from "next";
 
 import { authClient } from "@/lib/auth-client";
 
 import { ModeToggle } from "./mode-toggle";
+import { NAV } from "./nav-items";
 import UserMenu from "./user-menu";
 
-// The UI only reveals what the role can do; the server's permission policy
-// remains the authority (same matrix, packages/auth/src/policy.ts).
-const NAV: ReadonlyArray<{ href: Route; label: string; capability: Capability }> = [
-  { href: "/dashboard", label: "Dashboard", capability: "dashboard:read" },
-  { href: "/doctors", label: "Doctors", capability: "doctor:read" },
-  { href: "/patients", label: "Patients", capability: "patient:read" },
-  { href: "/team", label: "Team", capability: "team:manage" },
-];
-
+/**
+ * Mobile top bar (below md): brand row with theme + account controls, and
+ * an edge-to-edge scrollable pill nav so the header never widens the page.
+ */
 export default function Header() {
   const pathname = usePathname();
   const { data: session } = authClient.useSession();
@@ -27,43 +23,47 @@ export default function Header() {
   const links = NAV.filter((item) => can(session?.user.role, item.capability));
 
   return (
-    <header className="border-b">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2">
-        <Link href="/dashboard" className="text-base font-semibold whitespace-nowrap">
-          Doctor Tracker
+    <header className="border-border/70 bg-card/85 border-b backdrop-blur-sm md:hidden">
+      <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
+        <Link href="/dashboard" className="flex shrink-0 items-center gap-2.5">
+          <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <StethoscopeIcon aria-hidden className="size-4" />
+          </span>
+          <span className="font-display text-base font-semibold tracking-tight whitespace-nowrap">
+            Doctor Tracker
+          </span>
         </Link>
-        {/* Below sm the nav drops to its own edge-to-edge, horizontally
-            scrollable row so the header never widens the document. */}
-        <nav
-          aria-label="Main navigation"
-          className="order-last w-full overflow-x-auto sm:order-none sm:w-auto sm:overflow-visible"
-        >
-          <div className="flex gap-1">
-            {links.map(({ href, label }) => {
-              const active = pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-sm whitespace-nowrap transition-colors",
-                    active
-                      ? "bg-accent font-medium"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                  )}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <ModeToggle />
           <UserMenu />
         </div>
       </div>
+      <nav
+        aria-label="Main navigation"
+        className="overflow-x-auto px-4 pb-2.5"
+      >
+        <div className="flex w-max gap-1.5">
+          {links.map(({ href, label, icon: Icon }) => {
+            const active = pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon aria-hidden className="size-3.5" />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </header>
   );
 }

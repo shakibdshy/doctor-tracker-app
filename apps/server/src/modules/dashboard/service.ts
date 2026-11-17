@@ -69,7 +69,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       Patient.aggregate<{ _id: unknown; count: number; doctorName: string }>([
         { $match: { doctor: { $ne: null } } },
         { $group: { _id: "$doctor", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
+        // Tie-break on _id so the top-8 cut is stable across runs.
+        { $sort: { count: -1, _id: 1 } },
         { $limit: TOP_DOCTORS_LIMIT },
         {
           $lookup: {
@@ -81,11 +82,12 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
         },
         { $unwind: "$doctor" },
         { $project: { count: 1, doctorName: "$doctor.name" } },
+        { $sort: { count: -1, doctorName: 1 } },
       ]),
 
       Patient.aggregate<{ _id: string; count: number }>([
         { $group: { _id: "$condition", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
+        { $sort: { count: -1, _id: 1 } },
       ]),
     ]);
 

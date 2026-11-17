@@ -7,6 +7,7 @@ import { Card } from "@doctor-tracker-app/ui/components/card";
 import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog";
 import { DataTable } from "@doctor-tracker-app/ui/components/data-table";
 import type { DataTableColumn } from "@doctor-tracker-app/ui/components/data-table";
+import { DatePicker } from "@doctor-tracker-app/ui/components/date-picker";
 import { FilterBar, FilterField } from "@doctor-tracker-app/ui/components/filter-bar";
 import { Input } from "@doctor-tracker-app/ui/components/input";
 import { ListPagination } from "@doctor-tracker-app/ui/components/pagination";
@@ -143,7 +144,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
         cell: (ctx) => (
           <Link
             href={`/doctors/${ctx.row.original.id}`}
-            className="font-medium hover:underline"
+            className="font-medium underline-offset-4 hover:text-primary hover:underline"
           >
             {ctx.row.original.name}
           </Link>
@@ -155,13 +156,32 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
         cell: (ctx) => <Badge variant="secondary">{ctx.getValue() as string}</Badge>,
       },
       { accessorKey: "hospital", header: "Hospital" },
-      { accessorKey: "phone", header: "Phone" },
-      { accessorKey: "email", header: "Email" },
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        cell: (ctx) => (
+          <span className="font-mono text-[13px] text-muted-foreground">
+            {ctx.row.original.phone}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: (ctx) => (
+          <span
+            title={ctx.row.original.email}
+            className="block max-w-44 truncate font-mono text-[13px] text-muted-foreground"
+          >
+            {ctx.row.original.email}
+          </span>
+        ),
+      },
       {
         accessorKey: "createdAt",
         header: "Added",
         cell: (ctx) => (
-          <span className="text-muted-foreground tabular-nums">
+          <span className="font-mono text-[13px] text-muted-foreground tabular-nums">
             {dateFormatter.format(new Date(ctx.row.original.createdAt))}
           </span>
         ),
@@ -203,23 +223,26 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
   const doctors = data?.data ?? [];
 
   const doctorCard = (doctor: Doctor) => (
-    <Card key={doctor.id} className="gap-2 p-4">
+    <Card key={doctor.id} className="gap-3 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <Link href={`/doctors/${doctor.id}`} className="font-medium hover:underline">
+          <Link
+            href={`/doctors/${doctor.id}`}
+            className="text-[15px] font-semibold underline-offset-4 hover:text-primary hover:underline"
+          >
             {doctor.name}
           </Link>
-          <p className="text-muted-foreground truncate text-sm">{doctor.hospital}</p>
+          <p className="text-muted-foreground truncate text-[13px]">{doctor.hospital}</p>
         </div>
         <Badge variant="secondary">{doctor.specialization}</Badge>
       </div>
-      <div className="text-muted-foreground text-sm">
+      <div className="text-muted-foreground space-y-0.5 font-mono text-[13px]">
         <p>{doctor.phone}</p>
         <p className="truncate">{doctor.email}</p>
         <p className="tabular-nums">Added {dateFormatter.format(new Date(doctor.createdAt))}</p>
       </div>
       {canUpdate || canDelete ? (
-        <div className="flex items-center justify-end gap-1 border-t pt-2">
+        <div className="flex items-center justify-end gap-1 border-t border-border/60 pt-2.5">
           {canUpdate ? (
             <Button
               variant="ghost"
@@ -238,20 +261,8 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-sm">
-          {meta ? `${meta.total} doctors` : "Loading…"}
-        </p>
-        {canCreate ? (
-          <Button onClick={() => setCreateOpen(true)}>
-            <PlusIcon data-icon="inline-start" />
-            Add doctor
-          </Button>
-        ) : null}
-      </div>
-
-      <FilterBar>
-        <FilterField label="Search" htmlFor="doctor-search" className="sm:w-64">
+      <FilterBar className="rounded-xl border border-border/70 bg-card/60 p-3 sm:p-4">
+        <FilterField label="Search" htmlFor="doctor-search">
           <Input
             id="doctor-search"
             type="search"
@@ -260,7 +271,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
             onChange={(event) => setSearchInput(event.target.value)}
           />
         </FilterField>
-        <FilterField label="Specialization" htmlFor="doctor-specialization">
+        <FilterField label="Specialization" htmlFor="doctor-specialization-filter">
           <Select
             items={[{ value: "all", label: "All" }]}
             value={query.specialization ?? "all"}
@@ -271,7 +282,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
               })
             }
           >
-            <SelectTrigger id="doctor-specialization" className="w-44">
+            <SelectTrigger id="doctor-specialization-filter">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -284,7 +295,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
             </SelectContent>
           </Select>
         </FilterField>
-        <FilterField label="Hospital" htmlFor="doctor-hospital-filter" className="sm:w-48">
+        <FilterField label="Hospital" htmlFor="doctor-hospital-filter">
           <Input
             id="doctor-hospital-filter"
             placeholder="Starts with…"
@@ -295,27 +306,24 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
           />
         </FilterField>
         <FilterField label="From" htmlFor="doctor-from">
-          <Input
+          <DatePicker
             id="doctor-from"
-            type="date"
-            value={params.get("from") ?? ""}
-            onChange={(event) =>
-              setParams({ from: event.target.value || null, page: null })
-            }
+            value={params.get("from")}
+            onChange={(value) => setParams({ from: value, page: null })}
           />
         </FilterField>
         <FilterField label="To" htmlFor="doctor-to">
-          <Input
+          <DatePicker
             id="doctor-to"
-            type="date"
-            value={params.get("to") ?? ""}
-            onChange={(event) => setParams({ to: event.target.value || null, page: null })}
+            value={params.get("to")}
+            onChange={(value) => setParams({ to: value, page: null })}
           />
         </FilterField>
         {activeFilters > 0 ? (
           <Button
             variant="ghost"
             size="sm"
+            className="self-end justify-self-start xl:justify-self-end"
             onClick={() =>
               setParams({
                 search: null,
@@ -332,7 +340,18 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
         ) : null}
       </FilterBar>
 
-      <div className="rounded-lg border bg-card p-2">
+      <div className="bg-card shadow-card overflow-hidden rounded-xl ring-1 ring-foreground/8 max-lg:overflow-visible max-lg:bg-transparent max-lg:shadow-none max-lg:ring-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3 max-lg:border-b-0 max-lg:px-0 max-lg:pt-0 max-lg:pb-3">
+          <p className="text-muted-foreground text-[13px] tabular-nums">
+            {meta ? `${meta.total} doctors` : "Loading…"}
+          </p>
+          {canCreate ? (
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <PlusIcon data-icon="inline-start" />
+              Add doctor
+            </Button>
+          ) : null}
+        </div>
         <DataTable
           columns={columns}
           data={doctors}
@@ -348,7 +367,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
           renderCard={doctorCard}
         />
         {meta && meta.total > 0 ? (
-          <div className="border-t p-3">
+          <div className="border-t border-border/70 px-4 py-3 max-lg:border-t-0 max-lg:px-0 max-lg:pt-3 max-lg:pb-0">
             <ListPagination
               page={meta.page}
               totalPages={meta.totalPages}

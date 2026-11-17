@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
-import { Inter, Sora } from "next/font/google";
+import { Fragment_Mono, Fraunces, Schibsted_Grotesk } from "next/font/google";
 
 import "../index.css";
 import Providers from "@/components/providers";
 
-const sora = Sora({
-  variable: "--font-sora",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  axes: ["opsz"],
+});
+
+const schibsted = Schibsted_Grotesk({
+  variable: "--font-schibsted",
   subsets: ["latin"],
 });
 
-const inter = Inter({
-  variable: "--font-inter",
+const fragment = Fragment_Mono({
+  variable: "--font-fragment",
+  weight: "400",
   subsets: ["latin"],
 });
 
@@ -26,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${sora.variable} ${inter.variable} antialiased`}>
+      <body className={`${fraunces.variable} ${schibsted.variable} ${fragment.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

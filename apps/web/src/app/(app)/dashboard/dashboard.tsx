@@ -54,7 +54,7 @@ function ChartSkeleton() {
 
 function KpiSkeletons() {
   return (
-    <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       {Array.from({ length: 4 }).map((_, i) => (
         <Card key={i} className="gap-3 p-4">
           <Skeleton className="h-3.5 w-24" />
@@ -105,30 +105,46 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total doctors" value={kpis.totalDoctors} icon={StethoscopeIcon} />
-        <StatCard label="Total patients" value={kpis.totalPatients} icon={UsersIcon} />
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard
+          label="Total doctors"
+          value={kpis.totalDoctors}
+          icon={StethoscopeIcon}
+          className="animate-rise"
+        />
+        <StatCard
+          label="Total patients"
+          value={kpis.totalPatients}
+          icon={UsersIcon}
+          className="animate-rise [animation-delay:60ms]"
+        />
         <StatCard
           label="Unassigned patients"
           value={kpis.unassignedPatients}
           icon={UserXIcon}
+          className="animate-rise [animation-delay:120ms]"
         />
         <StatCard
           label="New this month"
           value={kpis.newPatientsThisMonth}
           hint="Patient intake"
           icon={UserPlusIcon}
+          className="animate-rise [animation-delay:180ms]"
         />
       </div>
 
       {hasPatients ? (
         <>
-          <div className="mt-4">
+          <div className="animate-rise mt-4 min-w-0 [animation-delay:220ms]">
             <IntakeLineChart buckets={monthlyIntake} />
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <PatientsPerDoctorChart rows={patientsPerDoctor} />
-            <ConditionDonut rows={conditionBreakdown} />
+            <div className="animate-rise min-w-0 [animation-delay:280ms]">
+              <PatientsPerDoctorChart rows={patientsPerDoctor} />
+            </div>
+            <div className="animate-rise min-w-0 [animation-delay:340ms]">
+              <ConditionDonut rows={conditionBreakdown} />
+            </div>
           </div>
           {patientsPerDoctor.length === 0 || conditionBreakdown.length === 0 ? (
             <p className="text-muted-foreground mt-2 flex items-center gap-1.5 text-xs">

@@ -149,7 +149,7 @@ type DataTableProps<TData extends RowData> = DataTableStateProps & {
   className?: string;
   onRowClick?: (row: TData) => void;
   /**
-   * Mobile-first card rendering: when provided, rows below the `md`
+   * Mobile-first card rendering: when provided, rows below the `lg`
    * breakpoint render as cards instead of the horizontally scrolling table.
    */
   renderCard?: (row: TData) => React.ReactNode;
@@ -245,8 +245,8 @@ function DataTable<TData extends RowData>({
     <div className={cn("w-full", className)}>
       {renderCard ? (
         <>
-          <div className="hidden md:block">{tableMarkup}</div>
-          <div className="flex flex-col gap-3 md:hidden">
+          <div className="hidden lg:block">{tableMarkup}</div>
+          <div className="flex flex-col gap-3 lg:hidden">
             {rows.map((row) => (
               <React.Fragment key={row.id}>
                 {renderCard(row.original)}

@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@doctor-tracker-app/ui/components/dialog";
+import { DatePicker } from "@doctor-tracker-app/ui/components/date-picker";
 import { Input } from "@doctor-tracker-app/ui/components/input";
 import { Label } from "@doctor-tracker-app/ui/components/label";
 import {
@@ -131,6 +132,10 @@ export function PatientFormDialog({
             doctorId: lockedDoctor?.id ?? null,
             notes: "",
           },
+      // keepFieldsRef writes each mounted input directly; the default reset
+      // clears field refs and re-registers a render late, leaving uncontrolled
+      // inputs (name/phone/notes) showing the previous record's values.
+      { keepFieldsRef: true },
     );
   }, [open, initial, detailQuery.isLoading, detailQuery.isError, full, lockedDoctor, reset]);
 
@@ -159,7 +164,7 @@ export function PatientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {editing
@@ -234,11 +239,20 @@ export function PatientFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="patient-dob">Date of birth</Label>
-              <Input
-                id="patient-dob"
-                type="date"
-                aria-invalid={Boolean(errors.dateOfBirth)}
-                {...register("dateOfBirth")}
+              <Controller
+                control={control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <DatePicker
+                    id="patient-dob"
+                    value={field.value as string}
+                    onChange={(value) => field.onChange(value ?? "")}
+                    aria-invalid={Boolean(errors.dateOfBirth)}
+                    placeholder="Select date of birth"
+                    startMonth={new Date(1900, 0)}
+                    endMonth={new Date()}
+                  />
+                )}
               />
               {errors.dateOfBirth ? (
                 <p className="text-destructive text-sm">{errors.dateOfBirth.message}</p>

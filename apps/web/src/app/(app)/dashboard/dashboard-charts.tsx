@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@doctor-tracker-app/ui/components/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@doctor-tracker-app/ui/components/card";
 import {
   ChartContainer,
   ChartLegend,
@@ -9,13 +9,14 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@doctor-tracker-app/ui/components/chart";
+import { useId } from "react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   XAxis,
@@ -32,27 +33,36 @@ const intakeConfig = {
 
 /** 12-month intake trend. */
 export function IntakeLineChart({ buckets }: { buckets: IntakeBucket[] }) {
+  const gradientId = `intake-fill-${useId().replace(/:/g, "")}`;
   return (
     <Card>
       <CardHeader>
         <CardTitle>Patient intake — last 12 months</CardTitle>
+        <CardDescription>New patient registrations per month</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={intakeConfig} className="h-64 w-full">
-          <LineChart data={buckets} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <AreaChart data={buckets} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--color-count)" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="var(--color-count)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={16} />
-            <YAxis tickLine={false} axisLine={false} width={32} allowDecimals={false} />
+            <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Line
+            <Area
               dataKey="count"
               type="monotone"
               stroke="var(--color-count)"
               strokeWidth={2}
+              fill={`url(#${gradientId})`}
               dot={false}
+              activeDot={{ r: 4 }}
             />
-          </LineChart>
+          </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>
@@ -63,12 +73,16 @@ const perDoctorConfig = {
   count: { label: "Patients", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
+const truncateName = (value: string) =>
+  value.length > 20 ? `${value.slice(0, 19)}…` : value;
+
 /** Workload distribution across the busiest doctors (horizontal bars). */
 export function PatientsPerDoctorChart({ rows }: { rows: PatientsPerDoctor[] }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Patients per doctor{rows.length > 0 ? ` — top ${rows.length}` : ""}</CardTitle>
+        <CardDescription>Assigned patients across the busiest doctors</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={perDoctorConfig} className="h-64 w-full">
@@ -84,11 +98,25 @@ export function PatientsPerDoctorChart({ rows }: { rows: PatientsPerDoctor[] }) 
               type="category"
               tickLine={false}
               axisLine={false}
-              width={120}
+              width={132}
+              interval={0}
+              // Plain <text> ticks: Recharts' Text wrapper word-wraps long
+              // names onto two lines, which breaks the bar rhythm.
+              tick={({ x, y, payload }: { x?: string | number; y?: string | number; payload?: { value?: unknown } }) => (
+                <text
+                  x={x}
+                  y={y}
+                  dy={4}
+                  textAnchor="end"
+                  fontSize={11}
+                  className="fill-muted-foreground"
+                >
+                  {truncateName(String(payload?.value ?? ""))}
+                </text>
+              )}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Bar dataKey="count" fill="var(--color-count)" radius={2} />
+            <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={14} />
           </BarChart>
         </ChartContainer>
       </CardContent>
@@ -109,7 +137,7 @@ export function ConditionDonut({ rows }: { rows: ConditionBreakdown[] }) {
   const config: ChartConfig = Object.fromEntries(
     rows.map((row, index) => [
       slug(row.condition),
-      { label: row.condition, color: `var(--chart-${(index % 5) + 1})` },
+      { label: row.condition, color: `var(--chart-${(index % 8) + 1})` },
     ]),
   );
 
@@ -117,6 +145,7 @@ export function ConditionDonut({ rows }: { rows: ConditionBreakdown[] }) {
     <Card>
       <CardHeader>
         <CardTitle>Patients by condition</CardTitle>
+        <CardDescription>Care mix across assigned patients</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={config} className="mx-auto h-64 w-full">
@@ -127,8 +156,8 @@ export function ConditionDonut({ rows }: { rows: ConditionBreakdown[] }) {
               data={data}
               dataKey="count"
               nameKey="key"
-              innerRadius={60}
-              outerRadius={95}
+              innerRadius="55%"
+              outerRadius="80%"
               paddingAngle={2}
               strokeWidth={2}
             >

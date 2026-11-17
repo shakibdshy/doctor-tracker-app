@@ -23,7 +23,7 @@ function StatCard({ label, value, hint, icon: Icon, className }: StatCardProps) 
       >
         <p className="text-muted-foreground text-xs font-medium">{label}</p>
         {Icon ? (
-          <span className="bg-secondary text-secondary-foreground flex size-7 items-center justify-center [&_svg:not([class*='size-'])]:size-4">
+          <span className="bg-secondary text-secondary-foreground flex size-8 items-center justify-center rounded-lg [&_svg:not([class*='size-'])]:size-4">
             <Icon aria-hidden />
           </span>
         ) : null}

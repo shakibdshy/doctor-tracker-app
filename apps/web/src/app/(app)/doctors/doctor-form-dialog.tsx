@@ -82,6 +82,10 @@ export function DoctorFormDialog({
               email: initial.email,
             }
           : EMPTY_VALUES,
+      // keepFieldsRef writes each mounted input directly; the default reset
+      // clears field refs and re-registers a render late, leaving uncontrolled
+      // inputs showing the previous record's values.
+      { keepFieldsRef: true },
       );
     }
   }, [open, initial, reset]);
@@ -106,7 +110,7 @@ export function DoctorFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit doctor" : "Add doctor"}</DialogTitle>
           <DialogDescription>

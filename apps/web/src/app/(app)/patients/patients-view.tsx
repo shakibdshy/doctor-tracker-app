@@ -7,6 +7,7 @@ import { Card } from "@doctor-tracker-app/ui/components/card";
 import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog";
 import { DataTable } from "@doctor-tracker-app/ui/components/data-table";
 import type { DataTableColumn } from "@doctor-tracker-app/ui/components/data-table";
+import { DatePicker } from "@doctor-tracker-app/ui/components/date-picker";
 import { FilterBar, FilterField } from "@doctor-tracker-app/ui/components/filter-bar";
 import { Input } from "@doctor-tracker-app/ui/components/input";
 import { ListPagination } from "@doctor-tracker-app/ui/components/pagination";
@@ -120,7 +121,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
         cell: (ctx) => (
           <div className="min-w-0">
             <span className="font-medium">{ctx.row.original.name}</span>
-            <p className="text-muted-foreground text-xs">{ctx.row.original.phone}</p>
+            <p className="text-muted-foreground font-mono text-xs">{ctx.row.original.phone}</p>
           </div>
         ),
       },
@@ -150,7 +151,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
         accessorKey: "dateOfBirth",
         header: "Born",
         cell: (ctx) => (
-          <span className="text-muted-foreground tabular-nums">
+          <span className="font-mono text-[13px] text-muted-foreground tabular-nums">
             {dateFormatter.format(new Date(ctx.row.original.dateOfBirth))}
           </span>
         ),
@@ -159,7 +160,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
         accessorKey: "createdAt",
         header: "Added",
         cell: (ctx) => (
-          <span className="text-muted-foreground tabular-nums">
+          <span className="font-mono text-[13px] text-muted-foreground tabular-nums">
             {dateFormatter.format(new Date(ctx.row.original.createdAt))}
           </span>
         ),
@@ -243,25 +244,16 @@ export default function PatientsView({ role }: { role: string | null | undefined
       canAssign={canAssign}
       onUnassign={(target) => unassignMutation.mutateAsync(target)}
       unassignPending={unassignMutation.isPending}
+      onEdit={canUpdate ? (target) => setEditing(target) : undefined}
+      onDelete={canDelete ? (target) => deleteMutation.mutateAsync(target) : undefined}
+      deletePending={deleteMutation.isPending}
     />
   );
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-sm">
-          {meta ? `${meta.total} patients` : "Loading…"}
-        </p>
-        {canCreate ? (
-          <Button onClick={() => setCreateOpen(true)}>
-            <PlusIcon data-icon="inline-start" />
-            Add patient
-          </Button>
-        ) : null}
-      </div>
-
-      <FilterBar>
-        <FilterField label="Search" htmlFor="patient-search" className="sm:w-60">
+      <FilterBar className="rounded-xl border border-border/70 bg-card/60 p-3 sm:p-4 xl:grid-cols-[1.2fr_0.9fr_1.2fr_0.85fr_0.85fr_auto]">
+        <FilterField label="Search" htmlFor="patient-search">
           <Input
             id="patient-search"
             type="search"
@@ -270,7 +262,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
             onChange={(event) => setSearchInput(event.target.value)}
           />
         </FilterField>
-        <FilterField label="Condition" htmlFor="patient-condition">
+        <FilterField label="Condition" htmlFor="patient-condition-filter">
           <Select
             items={[{ value: "all", label: "All" }]}
             value={query.condition ?? "all"}
@@ -278,7 +270,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
               setParams({ condition: value === "all" ? null : String(value), page: null })
             }
           >
-            <SelectTrigger id="patient-condition" className="w-40">
+            <SelectTrigger id="patient-condition-filter">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -303,7 +295,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
               })
             }
           >
-            <SelectTrigger id="patient-doctor-filter" className="w-52">
+            <SelectTrigger id="patient-doctor-filter">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -318,25 +310,24 @@ export default function PatientsView({ role }: { role: string | null | undefined
           </Select>
         </FilterField>
         <FilterField label="From" htmlFor="patient-from">
-          <Input
+          <DatePicker
             id="patient-from"
-            type="date"
-            value={params.get("from") ?? ""}
-            onChange={(event) => setParams({ from: event.target.value || null, page: null })}
+            value={params.get("from")}
+            onChange={(value) => setParams({ from: value, page: null })}
           />
         </FilterField>
         <FilterField label="To" htmlFor="patient-to">
-          <Input
+          <DatePicker
             id="patient-to"
-            type="date"
-            value={params.get("to") ?? ""}
-            onChange={(event) => setParams({ to: event.target.value || null, page: null })}
+            value={params.get("to")}
+            onChange={(value) => setParams({ to: value, page: null })}
           />
         </FilterField>
         {activeFilters > 0 ? (
           <Button
             variant="ghost"
             size="sm"
+            className="self-end justify-self-start xl:justify-self-end"
             onClick={() =>
               setParams({
                 search: null,
@@ -353,7 +344,18 @@ export default function PatientsView({ role }: { role: string | null | undefined
         ) : null}
       </FilterBar>
 
-      <div className="rounded-lg border bg-card p-2">
+      <div className="bg-card shadow-card overflow-hidden rounded-xl ring-1 ring-foreground/8 max-lg:overflow-visible max-lg:bg-transparent max-lg:shadow-none max-lg:ring-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3 max-lg:border-b-0 max-lg:px-0 max-lg:pt-0 max-lg:pb-3">
+          <p className="text-muted-foreground text-[13px] tabular-nums">
+            {meta ? `${meta.total} patients` : "Loading…"}
+          </p>
+          {canCreate ? (
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <PlusIcon data-icon="inline-start" />
+              Add patient
+            </Button>
+          ) : null}
+        </div>
         <DataTable
           columns={columns}
           data={patients}
@@ -369,7 +371,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
           renderCard={patientCard}
         />
         {meta && meta.total > 0 ? (
-          <div className="border-t p-3">
+          <div className="border-t border-border/70 px-4 py-3 max-lg:border-t-0 max-lg:px-0 max-lg:pt-3 max-lg:pb-0">
             <ListPagination
               page={meta.page}
               totalPages={meta.totalPages}

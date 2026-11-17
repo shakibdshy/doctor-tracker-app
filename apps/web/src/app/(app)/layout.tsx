@@ -1,14 +1,19 @@
 import Header from "@/components/header";
+import { Sidebar } from "@/components/sidebar";
 
 /**
- * Shell for every authenticated surface: role-aware nav, theme toggle, and
- * the user menu. Pages inside this group must call `requireSession()`.
+ * Shell for every authenticated surface: pine sidebar on desktop, top bar
+ * with pill nav on mobile. Pages inside this group must call
+ * `requireSession()`. `main` is the scroll container for the content column.
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid h-svh grid-rows-[auto_1fr]">
-      <Header />
-      <main className="overflow-y-auto">{children}</main>
+    <div className="flex h-svh">
+      <Sidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header />
+        <main className="flex-1 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 }

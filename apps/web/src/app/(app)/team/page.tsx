@@ -1,6 +1,7 @@
 import { can } from "@doctor-tracker-app/auth/policy";
 import { redirect } from "next/navigation";
 
+import { PageHeader } from "@/components/page-header";
 import { requireSession } from "@/lib/session";
 
 import TeamView from "./team-view";
@@ -16,13 +17,12 @@ export default async function TeamPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-6">
-      <header className="mb-4">
-        <h1 className="text-2xl font-semibold">Team</h1>
-        <p className="text-muted-foreground text-sm">
-          Provision users, set roles, and revoke access.
-        </p>
-      </header>
+    <div className="container mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <PageHeader
+        className="mb-5"
+        title="Team"
+        description="Provision users, set roles, and revoke access."
+      />
       <TeamView currentUserId={user.id} />
     </div>
   );

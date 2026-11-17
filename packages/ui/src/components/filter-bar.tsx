@@ -10,7 +10,7 @@ function FilterBar({
       data-slot="filter-bar"
       role="search"
       className={cn(
-        "flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end",
+        "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.35fr_1fr_1fr_0.85fr_0.85fr_auto] xl:items-end",
         className,
       )}
       {...props}
@@ -41,7 +41,7 @@ function FilterField({
     >
       <label
         htmlFor={htmlFor}
-        className="text-muted-foreground text-xs font-medium"
+        className="text-muted-foreground text-[11px] font-semibold tracking-[0.08em] uppercase"
       >
         {label}
       </label>

@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@doctor-tracker-app/ui/components/button";
 import {
   DropdownMenu,
@@ -9,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@doctor-tracker-app/ui/components/dropdown-menu";
 import { Skeleton } from "@doctor-tracker-app/ui/components/skeleton";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
@@ -23,11 +24,9 @@ export default function UserMenu() {
   }
 
   if (!session) {
-    return (
-      <Link href="/login">
-        <Button variant="outline">Sign In</Button>
-      </Link>
-    );
+    // Every page rendering this menu is session-guarded, so this only shows
+    // in the instant before the session resolves.
+    return null;
   }
 
   return (
@@ -35,24 +34,29 @@ export default function UserMenu() {
       <DropdownMenuTrigger render={<Button variant="outline" />}>
         {session.user.name}
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-card">
+      <DropdownMenuContent align="end" className="bg-card">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuLabel>My account</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
+          <DropdownMenuItem className="text-muted-foreground capitalize">
+            {session.user.role}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
               authClient.signOut({
                 fetchOptions: {
                   onSuccess: () => {
-                    router.push("/");
+                    router.push("/login");
+                    router.refresh();
                   },
                 },
               });
             }}
           >
-            Sign Out
+            Sign out
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

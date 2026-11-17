@@ -10,6 +10,11 @@ const userSchema = new Schema(
     email: { type: String, required: true, unique: true },
     emailVerified: { type: Boolean, required: true, default: false },
     image: { type: String },
+    // better-auth admin plugin fields
+    role: { type: String, required: false },
+    banned: { type: Boolean, required: false, default: false },
+    banReason: { type: String },
+    banExpires: { type: Date },
     createdAt: { type: Date, required: true, default: Date.now },
     updatedAt: { type: Date, required: true, default: Date.now },
   },
@@ -25,6 +30,8 @@ const sessionSchema = new Schema(
     updatedAt: { type: Date, required: true, default: Date.now },
     ipAddress: { type: String },
     userAgent: { type: String },
+    // better-auth admin plugin field
+    impersonatedBy: { type: String },
     userId: { type: ObjectId, ref: "User", required: true },
   },
   { collection: "session" },

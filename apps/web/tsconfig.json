@@ -21,6 +21,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
+      "@doctor-tracker-app/auth/*": ["../../packages/auth/src/*"],
       "@doctor-tracker-app/ui/*": ["../../packages/ui/src/*"]
     }
   },

@@ -1,16 +1,20 @@
-"use client";
-
-import { useState } from "react";
+import { redirect } from "next/navigation";
 
 import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
+import { getSessionServer } from "@/lib/session";
 
-export default function LoginPage() {
-  const [showSignIn, setShowSignIn] = useState(false);
+export const metadata = { title: "Sign in — Doctor Tracker" };
 
-  return showSignIn ? (
-    <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-  ) : (
-    <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+export default async function LoginPage() {
+  // Already signed in? Straight to the portal.
+  const session = await getSessionServer();
+  if (session?.user) {
+    redirect("/dashboard");
+  }
+
+  return (
+    <main className="grid flex-1 place-items-center">
+      <SignInForm />
+    </main>
   );
 }

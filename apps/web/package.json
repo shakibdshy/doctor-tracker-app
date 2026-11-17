@@ -10,9 +10,10 @@
     "env:generate": "varlock codegen"
   },
   "dependencies": {
+    "@doctor-tracker-app/auth": "workspace:*",
     "@doctor-tracker-app/ui": "workspace:*",
+    "@hookform/resolvers": "^7.0.7",
     "@swc/helpers": "^0.5.24",
-    "@tanstack/react-form": "^1.33.5",
     "@varlock/nextjs-integration": "2.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "better-auth": "catalog:",
@@ -21,6 +22,7 @@
     "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-hook-form": "^7.92.0",
     "sonner": "catalog:",
     "varlock": "catalog:",
     "zod": "catalog:"

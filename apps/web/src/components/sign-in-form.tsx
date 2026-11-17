@@ -1,131 +1,90 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@doctor-tracker-app/ui/components/button";
 import { Input } from "@doctor-tracker-app/ui/components/input";
 import { Label } from "@doctor-tracker-app/ui/components/label";
-import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import z from "zod";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
-import Loader from "./loader";
+const signInSchema = z.object({
+  email: z.email("Enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
-export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
+type SignInValues = z.infer<typeof signInSchema>;
+
+export default function SignInForm() {
   const router = useRouter();
-  const { isPending } = authClient.useSession();
-
-  const form = useForm({
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-    onSubmit: async ({ value }) => {
-      await authClient.signIn.email(
-        {
-          email: value.email,
-          password: value.password,
-        },
-        {
-          onSuccess: () => {
-            router.push("/dashboard");
-            toast.success("Sign in successful");
-          },
-          onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
-          },
-        },
-      );
-    },
-    validators: {
-      onSubmit: z.object({
-        email: z.email("Invalid email address"),
-        password: z.string().min(8, "Password must be at least 8 characters"),
-      }),
-    },
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: "", password: "" },
   });
 
-  if (isPending) {
-    return <Loader />;
-  }
+  const onSubmit = handleSubmit(async (values) => {
+    const { error } = await authClient.signIn.email(values);
+    if (error) {
+      if (error.status === 429) {
+        toast.error("Too many sign-in attempts. Please wait a few seconds and try again.");
+      } else {
+        toast.error(error.message || "Unable to sign in. Please try again.");
+      }
+      return;
+    }
+    toast.success("Signed in");
+    router.push("/dashboard");
+    router.refresh();
+  });
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-        className="space-y-4"
-      >
-        <div>
-          <form.Field name="email">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Email</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
-
-        <div>
-          <form.Field name="password">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
-
-        <form.Subscribe
-          selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-        >
-          {({ canSubmit, isSubmitting }) => (
-            <Button type="submit" className="w-full" disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Sign In"}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
-
-      <div className="mt-4 text-center">
-        <Button
-          variant="link"
-          onClick={onSwitchToSignUp}
-          className="text-indigo-600 hover:text-indigo-800"
-        >
-          Need an account? Sign Up
-        </Button>
+    <div className="mx-auto mt-16 w-full max-w-md px-4">
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl font-bold">Sign in</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Use the credentials your administrator provisioned
+        </p>
       </div>
+
+      <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            aria-invalid={Boolean(errors.email)}
+            {...register("email")}
+          />
+          {errors.email ? <p className="text-destructive text-sm">{errors.email.message}</p> : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            aria-invalid={Boolean(errors.password)}
+            {...register("password")}
+          />
+          {errors.password ? (
+            <p className="text-destructive text-sm">{errors.password.message}</p>
+          ) : null}
+        </div>
+
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
     </div>
   );
 }

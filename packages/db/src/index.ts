@@ -7,4 +7,9 @@ export async function createDb(env: DatabaseConfig) {
   return mongoose.connection.getClient().db();
 }
 
+/** Close the shared mongoose connection (graceful shutdown). */
+export async function closeDb() {
+  await mongoose.disconnect();
+}
+
 export type Database = Awaited<ReturnType<typeof createDb>>;

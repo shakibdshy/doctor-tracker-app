@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { requireAuth } from "../middleware/session";
+import { dashboardRouter } from "../modules/dashboard/routes";
 import { doctorsRouter } from "../modules/doctors/routes";
 import { patientsRouter } from "../modules/patients/routes";
 
@@ -12,6 +13,7 @@ const v1Router = Router();
 v1Router.use(requireAuth);
 
 // Feature routers
+v1Router.use("/dashboard", dashboardRouter);
 v1Router.use("/doctors", doctorsRouter);
 v1Router.use("/patients", patientsRouter);
 

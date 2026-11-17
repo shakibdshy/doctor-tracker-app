@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@doctor-tracker-app/ui/components/select";
+import { Skeleton } from "@doctor-tracker-app/ui/components/skeleton";
 import { Textarea } from "@doctor-tracker-app/ui/components/textarea";
 import { CONDITIONS, GENDERS } from "@doctor-tracker-app/db/schemas/enums";
 import {
@@ -110,8 +111,10 @@ export function PatientFormDialog({
   useEffect(() => {
     if (!open) return;
     // Editing seeds only from the fetched record — never from the
-    // notes-less list row — so a save can't blank stored notes.
-    if (initial && (detailQuery.isLoading || detailQuery.isError)) return;
+    // notes-less list row — so a save can't blank stored notes. While the
+    // record is in flight, reset to blanks: the RHF instance persists
+    // across opens, so skipping the reset here would render the previous
+    // patient's details until the fetch resolves.
     reset(
       full
         ? {
@@ -182,6 +185,60 @@ export function PatientFormDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {waitingForRecord ? (
+          // Skeleton mirrors the form layout so nothing shifts when the
+          // record lands. The form stays unmounted — its RHF state would
+          // otherwise show the previously edited patient's details.
+          <div className="flex flex-col gap-4" aria-busy="true">
+            <div className="flex flex-col gap-1.5">
+              <Label>Name</Label>
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label>Phone</Label>
+                <Skeleton className="h-9 w-full" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Gender</Label>
+                <Skeleton className="h-9 w-full" />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label>Date of birth</Label>
+                <Skeleton className="h-9 w-full" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Condition</Label>
+                <Skeleton className="h-9 w-full" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Doctor</Label>
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Notes (optional)</Label>
+              <Skeleton className="h-[76px] w-full" />
+            </div>
+          </div>
+        ) : detailQuery.isError ? (
+          <div className="flex flex-col gap-3 py-2">
+            <p className="text-destructive text-sm">
+              Couldn&apos;t load this patient&apos;s details. Check your
+              connection and try again.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void detailQuery.refetch()}
+              disabled={detailQuery.isFetching}
+            >
+              {detailQuery.isFetching ? "Retrying…" : "Try again"}
+            </Button>
+          </div>
+        ) : (
         <form
           onSubmit={(event) => void handleSubmit((values) => mutation.mutate(values))(event)}
           className="flex flex-col gap-4"
@@ -344,20 +401,13 @@ export function PatientFormDialog({
             </Button>
             <Button
               type="submit"
-              // Editing waits for the full record so notes can't be wiped by
-              // saving before the fetch resolves.
-              disabled={mutation.isPending || (editing && (detailQuery.isLoading || detailQuery.isError))}
+              disabled={mutation.isPending}
             >
-              {mutation.isPending
-                ? "Saving…"
-                : editing && (detailQuery.isLoading || detailQuery.isError)
-                  ? "Loading…"
-                  : editing
-                    ? "Save changes"
-                    : "Create patient"}
+              {mutation.isPending ? "Saving…" : editing ? "Save changes" : "Create patient"}
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

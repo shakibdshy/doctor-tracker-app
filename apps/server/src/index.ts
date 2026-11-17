@@ -45,6 +45,11 @@ const server = app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
+// Vercel's serverless runtime imports this module and bridges requests to the
+// default-exported app; app.listen is stubbed there, so this export is the
+// serving path on Vercel while listen() remains for local runs.
+export default app;
+
 const shutdown = (signal: string) => {
   console.log(`Received ${signal}, shutting down…`);
   // Do not wait indefinitely on keep-alive connections.

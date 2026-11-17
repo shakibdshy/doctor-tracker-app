@@ -9,7 +9,9 @@ import { createPortalAuthClient } from "@/lib/auth-client";
  * request's own origin — the session call still flows through the
  * /api/auth rewrite to Express (ADR-0002). Anything but a live session —
  * no cookie, expired, or fetch failure — resolves to null so guards fail
- * closed.
+ * closed: the API being unreachable must degrade to the sign-in gate,
+ * never take the portal down with it (better-auth's client throws on
+ * connection errors, so the call is guarded here).
  */
 export async function getSessionServer() {
   const requestHeaders = await headers();
@@ -21,10 +23,16 @@ export async function getSessionServer() {
     return null;
   }
   const client = createPortalAuthClient(`${proto}://${host}`);
-  const { data: session } = await client.getSession({
-    fetchOptions: { headers: requestHeaders },
-  });
-  return session;
+  try {
+    const { data: session } = await client.getSession({
+      fetchOptions: { headers: requestHeaders },
+    });
+    return session;
+  } catch {
+    // API unreachable (connection refused, DNS failure, reset socket):
+    // guards fail closed — visitors land on /login instead of a 500.
+    return null;
+  }
 }
 
 /**

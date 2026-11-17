@@ -23,16 +23,11 @@ import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { ApiError, apiFetch, type Doctor, type PageMeta } from "@/lib/api";
+import { apiFetch, apiErrorMessage, type Doctor, type PageMeta } from "@/lib/api";
+import Link from "next/link";
 import { useDebouncedValue, useUrlState } from "@/lib/hooks";
 
 import { DoctorFormDialog } from "./doctor-form-dialog";
-
-function apiErrorMessage(error: unknown): string {
-  return error instanceof ApiError
-    ? error.message
-    : "Something went wrong. Please try again.";
-}
 
 /** Deterministic date rendering — no SSR/client timezone mismatch. */
 const dateFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -145,7 +140,14 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
       {
         accessorKey: "name",
         header: "Name",
-        cell: (ctx) => <span className="font-medium">{ctx.row.original.name}</span>,
+        cell: (ctx) => (
+          <Link
+            href={`/doctors/${ctx.row.original.id}`}
+            className="font-medium hover:underline"
+          >
+            {ctx.row.original.name}
+          </Link>
+        ),
       },
       {
         accessorKey: "specialization",
@@ -204,7 +206,9 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
     <Card key={doctor.id} className="gap-2 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="font-medium">{doctor.name}</span>
+          <Link href={`/doctors/${doctor.id}`} className="font-medium hover:underline">
+            {doctor.name}
+          </Link>
           <p className="text-muted-foreground truncate text-sm">{doctor.hospital}</p>
         </div>
         <Badge variant="secondary">{doctor.specialization}</Badge>

@@ -5,7 +5,7 @@ import type { Request, RequestHandler } from "express";
 import { AppError } from "../http/errors";
 import { auth } from "../services";
 
-type AuthedRequest = Request & {
+export type AuthedRequest = Request & {
   user?: Session["user"];
   session?: Session["session"];
 };

@@ -29,7 +29,7 @@ import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { ApiError, apiFetch, type Doctor } from "@/lib/api";
+import { apiFetch, apiErrorMessage, type Doctor } from "@/lib/api";
 
 export type DoctorFormDialogProps = {
   open: boolean;
@@ -100,9 +100,7 @@ export function DoctorFormDialog({
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(
-        error instanceof ApiError ? error.message : "Something went wrong. Please try again.",
-      );
+      toast.error(apiErrorMessage(error));
     },
   });
 

@@ -1,6 +1,6 @@
 import { requireSession } from "@/lib/session";
 
-import PatientsDemo from "./patients-demo";
+import PatientsView from "./patients-view";
 
 export const metadata = { title: "Patients — Doctor Tracker" };
 
@@ -12,11 +12,10 @@ export default async function PatientsPage() {
       <header className="mb-4">
         <h1 className="text-2xl font-semibold">Patients</h1>
         <p className="text-muted-foreground text-sm">
-          Design-system demo — the live patient list connects in the patients
-          ticket.
+          The patient population — search, filter, assign, and manage from here.
         </p>
       </header>
-      <PatientsDemo role={user.role} />
+      <PatientsView role={user.role} />
     </div>
   );
 }

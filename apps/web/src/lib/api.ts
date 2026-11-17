@@ -9,6 +9,19 @@ export type Doctor = {
   createdAt: string;
 };
 
+/** A patient record as the envelope returns it (doctor resolved to name). */
+export type Patient = {
+  id: string;
+  name: string;
+  phone: string;
+  gender: string;
+  dateOfBirth: string;
+  condition: string;
+  doctor: { id: string; name: string } | null;
+  createdAt: string;
+  notes?: string;
+};
+
 /** Pagination metadata from the API envelope (mirrors the server shape). */
 export type PageMeta = {
   page: number;
@@ -33,6 +46,13 @@ export class ApiError extends Error {
 type EnvelopeBody<T> =
   | { success: true; data: T; meta?: PageMeta }
   | { success: false; error: { code: string; message: string; details?: unknown } };
+
+/** Human-facing message for any thrown API failure. */
+export function apiErrorMessage(error: unknown): string {
+  return error instanceof ApiError
+    ? error.message
+    : "Something went wrong. Please try again.";
+}
 
 /**
  * Same-origin fetch that unwraps the uniform response envelope (ADR-0002:

@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 
 import { requireSession } from "@/lib/session";
 
+import TeamView from "./team-view";
+
 export const metadata = { title: "Team — Doctor Tracker" };
 
-// Admin-only surface, enforced here and (once the team feature lands) on the
-// server's admin-plugin endpoints. Staff who type the URL get bounced.
+// Admin-only surface, enforced here and on the better-auth admin endpoints
+// (adminRoles: ["admin"]). Staff who type the URL get bounced.
 export default async function TeamPage() {
   const { user } = await requireSession();
   if (!can(user.role, "team:manage")) {
@@ -15,10 +17,13 @@ export default async function TeamPage() {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6">
-      <h1 className="text-2xl font-semibold">Team</h1>
-      <p className="text-muted-foreground mt-6 text-sm">
-        User provisioning and role management are coming soon.
-      </p>
+      <header className="mb-4">
+        <h1 className="text-2xl font-semibold">Team</h1>
+        <p className="text-muted-foreground text-sm">
+          Provision users, set roles, and revoke access.
+        </p>
+      </header>
+      <TeamView currentUserId={user.id} />
     </div>
   );
 }

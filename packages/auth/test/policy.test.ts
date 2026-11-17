@@ -17,6 +17,22 @@ const ALL_CAPABILITIES = [
   "patient:delete",
   "dashboard:read",
   "team:manage",
+  // better-auth admin-plugin statements — Admin-only (Team management).
+  "user:create",
+  "user:list",
+  "user:set-role",
+  "user:ban",
+  "user:impersonate",
+  "user:impersonate-admins",
+  "user:delete",
+  "user:set-password",
+  "user:set-email",
+  "user:set-phone",
+  "user:get",
+  "user:update",
+  "session:list",
+  "session:revoke",
+  "session:delete",
 ] as const;
 
 const STAFF_ALLOWED = new Set<string>([

@@ -4,12 +4,31 @@ import { createAccessControl } from "better-auth/plugins/access";
  * Capability statements — the single source of truth for portal permissions.
  * The better-auth admin plugin's team endpoints and the /api/v1 route
  * middleware both enforce this same matrix (see `can`).
+ *
+ * `user`/`session` mirror better-auth's default admin statements (create,
+ * list, set-role, ban, …) so the admin plugin's own authorization checks
+ * pass for Admins once custom roles are registered; they are domain-neutral.
  */
 export const statements = {
   doctor: ["read", "create", "update", "delete"],
   patient: ["read", "create", "update", "assign", "delete"],
   dashboard: ["read"],
   team: ["manage"],
+  user: [
+    "create",
+    "list",
+    "set-role",
+    "ban",
+    "impersonate",
+    "impersonate-admins",
+    "delete",
+    "set-password",
+    "set-email",
+    "set-phone",
+    "get",
+    "update",
+  ],
+  session: ["list", "revoke", "delete"],
 } as const;
 
 export type Capability = {

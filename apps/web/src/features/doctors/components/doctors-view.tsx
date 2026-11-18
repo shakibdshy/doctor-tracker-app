@@ -1,6 +1,5 @@
 "use client";
 
-import { can } from "@doctor-tracker-app/auth/policy";
 import { Badge } from "@doctor-tracker-app/ui/components/badge";
 import { Button } from "@doctor-tracker-app/ui/components/button";
 import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog";
@@ -25,6 +24,7 @@ import { toast } from "sonner";
 
 import { apiErrorMessage } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
+import { usePermissions } from "@/lib/use-permissions";
 import { useKeysetList } from "@/lib/use-keyset-list";
 
 import type { Doctor, DoctorListQuery } from "../api";
@@ -56,9 +56,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
     activeFilters,
   } = useKeysetList<DoctorFilters>({ fields: DOCTOR_FILTER_FIELDS });
 
-  const canCreate = can(role, "doctor:create");
-  const canUpdate = can(role, "doctor:update");
-  const canDelete = can(role, "doctor:delete");
+  const { canCreateDoctor, canUpdateDoctor, canDeleteDoctor } = usePermissions(role);
 
   const { data, isLoading, error, refetch, isPlaceholderData } = useDoctors(query);
   const meta = !isPlaceholderData ? data?.meta : undefined;
@@ -141,14 +139,14 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
           </span>
         ),
       },
-      ...(canUpdate || canDelete
+      ...(canUpdateDoctor || canDeleteDoctor
         ? [
             {
               id: "actions",
               header: "",
               cell: (ctx) => (
                 <div className="flex items-center justify-end gap-1">
-                  {canUpdate ? (
+                  {canUpdateDoctor ? (
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -158,14 +156,14 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
                       <PencilIcon />
                     </Button>
                   ) : null}
-                  {canDelete ? deleteButton(ctx.row.original) : null}
+                  {canDeleteDoctor ? deleteButton(ctx.row.original) : null}
                 </div>
               ),
             } satisfies DataTableColumn<Doctor>,
           ]
         : []),
     ],
-    [canUpdate, canDelete, deleteMutation],
+    [canUpdateDoctor, canDeleteDoctor, deleteMutation],
   );
 
   const doctors = data?.data ?? [];
@@ -174,8 +172,8 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
     <DoctorCard
       key={doctor.id}
       doctor={doctor}
-      canUpdate={canUpdate}
-      canDelete={canDelete}
+      canUpdate={canUpdateDoctor}
+      canDelete={canDeleteDoctor}
       onEdit={setEditing}
       onDelete={(target) => deleteMutation.mutateAsync(target)}
       deletePending={deleteMutation.isPending}
@@ -270,7 +268,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
           <p className="text-muted-foreground text-[13px] tabular-nums">
             {knownTotals ? `${knownTotals.total} doctors` : "Loading…"}
           </p>
-          {canCreate ? (
+          {canCreateDoctor ? (
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <PlusIcon data-icon="inline-start" />
               Add doctor

@@ -1,12 +1,12 @@
 "use client";
 
-import { can } from "@doctor-tracker-app/auth/policy";
 import { cn } from "@doctor-tracker-app/ui/lib/utils";
 import { StethoscopeIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+import { usePermissions } from "@/lib/use-permissions";
 
 import { ModeToggle } from "./mode-toggle";
 import { NAV } from "./nav-items";
@@ -19,8 +19,9 @@ import UserMenu from "./user-menu";
 export default function Header() {
   const pathname = usePathname();
   const { data: session } = authClient.useSession();
+  const { allowed } = usePermissions(session?.user.role);
 
-  const links = NAV.filter((item) => can(session?.user.role, item.capability));
+  const links = NAV.filter((item) => allowed(item.capability));
 
   return (
     <header className="border-border/70 bg-card/85 border-b backdrop-blur-sm md:hidden">

@@ -1,6 +1,5 @@
 "use client";
 
-import { can } from "@doctor-tracker-app/auth/policy";
 import { Badge } from "@doctor-tracker-app/ui/components/badge";
 import { Button } from "@doctor-tracker-app/ui/components/button";
 import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog";
@@ -26,6 +25,7 @@ import type { Doctor } from "@/features/doctors/api";
 import { useDoctorOptions } from "@/features/doctors/queries";
 import { apiErrorMessage } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
+import { usePermissions } from "@/lib/use-permissions";
 import { useKeysetList } from "@/lib/use-keyset-list";
 
 import type { Patient, PatientListQuery } from "../api";
@@ -65,10 +65,8 @@ export default function PatientsView({ role }: { role: string | null | undefined
     activeFilters,
   } = useKeysetList<PatientFilters>({ fields: PATIENT_FILTER_FIELDS });
 
-  const canCreate = can(role, "patient:create");
-  const canUpdate = can(role, "patient:update");
-  const canAssign = can(role, "patient:assign");
-  const canDelete = can(role, "patient:delete");
+  const { canCreatePatient, canUpdatePatient, canAssignPatient, canDeletePatient } =
+    usePermissions(role);
 
   // Doctor filter options: the roster is small enough for one capped page.
   const { data: doctorOptions } = useDoctorOptions();
@@ -139,14 +137,14 @@ export default function PatientsView({ role }: { role: string | null | undefined
           </span>
         ),
       },
-      ...(canUpdate || canAssign || canDelete
+      ...(canUpdatePatient || canAssignPatient || canDeletePatient
         ? [
             {
               id: "actions",
               header: "",
               cell: (ctx) => (
                 <div className="flex items-center justify-end gap-1">
-                  {canAssign && ctx.row.original.doctor ? (
+                  {canAssignPatient && ctx.row.original.doctor ? (
                     <ConfirmDialog
                       trigger={
                         <Button
@@ -164,7 +162,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
                       isPending={unassignMutation.isPending}
                     />
                   ) : null}
-                  {canUpdate ? (
+                  {canUpdatePatient ? (
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -174,7 +172,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
                       <PencilIcon />
                     </Button>
                   ) : null}
-                  {canDelete ? (
+                  {canDeletePatient ? (
                     <ConfirmDialog
                       trigger={
                         <Button
@@ -199,7 +197,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
           ]
         : []),
     ],
-    [canUpdate, canAssign, canDelete, deleteMutation, unassignMutation],
+    [canUpdatePatient, canAssignPatient, canDeletePatient, deleteMutation, unassignMutation],
   );
 
   const patients = data?.data ?? [];
@@ -208,11 +206,11 @@ export default function PatientsView({ role }: { role: string | null | undefined
     <PatientCard
       key={patient.id}
       patient={patient}
-      canAssign={canAssign}
+      canAssign={canAssignPatient}
       onUnassign={(target) => unassignMutation.mutateAsync(target)}
       unassignPending={unassignMutation.isPending}
-      onEdit={canUpdate ? (target) => setEditing(target) : undefined}
-      onDelete={canDelete ? (target) => deleteMutation.mutateAsync(target) : undefined}
+      onEdit={canUpdatePatient ? (target) => setEditing(target) : undefined}
+      onDelete={canDeletePatient ? (target) => deleteMutation.mutateAsync(target) : undefined}
       deletePending={deleteMutation.isPending}
     />
   );
@@ -318,7 +316,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
           <p className="text-muted-foreground text-[13px] tabular-nums">
             {knownTotals ? `${knownTotals.total} patients` : "Loading…"}
           </p>
-          {canCreate ? (
+          {canCreatePatient ? (
             <Button size="sm" onClick={() => setCreateOpen(true)}>
               <PlusIcon data-icon="inline-start" />
               Add patient

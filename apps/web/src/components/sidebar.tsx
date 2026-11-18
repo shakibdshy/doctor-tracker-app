@@ -1,6 +1,5 @@
 "use client";
 
-import { can } from "@doctor-tracker-app/auth/policy";
 import { cn } from "@doctor-tracker-app/ui/lib/utils";
 import {
   DropdownMenu,
@@ -13,6 +12,7 @@ import { usePathname } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
 import { initialsOf } from "@/lib/format";
+import { usePermissions } from "@/lib/use-permissions";
 
 import { AccountMenuItems } from "./account-menu";
 import { ModeToggle } from "./mode-toggle";
@@ -26,8 +26,9 @@ import { NAV } from "./nav-items";
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = authClient.useSession();
+  const { allowed } = usePermissions(session?.user.role);
 
-  const links = NAV.filter((item) => can(session?.user.role, item.capability));
+  const links = NAV.filter((item) => allowed(item.capability));
 
   return (
     <aside className="grain bg-sidebar text-sidebar-foreground relative hidden w-64 shrink-0 flex-col md:flex">

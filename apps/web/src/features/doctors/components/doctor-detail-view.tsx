@@ -1,6 +1,5 @@
 "use client";
 
-import { can } from "@doctor-tracker-app/auth/policy";
 import { Badge } from "@doctor-tracker-app/ui/components/badge";
 import { Button } from "@doctor-tracker-app/ui/components/button";
 import { Card } from "@doctor-tracker-app/ui/components/card";
@@ -18,6 +17,7 @@ import { PatientFormDialog } from "@/features/patients/components/patient-form-d
 import { listPatients, type Patient } from "@/features/patients/api";
 import { patientKeys, useOptimisticUnassign } from "@/features/patients/queries";
 import { dateFormatter } from "@/lib/format";
+import { usePermissions } from "@/lib/use-permissions";
 
 import type { Doctor } from "../api";
 import { useDoctor } from "../queries";
@@ -31,8 +31,7 @@ export default function DoctorDetailView({
   doctorId: string;
   role: string | null | undefined;
 }) {
-  const canCreate = can(role, "patient:create");
-  const canAssign = can(role, "patient:assign");
+  const { canCreatePatient, canAssignPatient } = usePermissions(role);
 
   // Keyset pagination (ADR-0003): local state instead of URL params (this
   // page has no filter context). Each visited page's cursor is remembered in
@@ -126,7 +125,7 @@ export default function DoctorDetailView({
           </span>
         ),
       },
-      ...(canAssign
+      ...(canAssignPatient
         ? [
             {
               id: "actions",
@@ -153,7 +152,7 @@ export default function DoctorDetailView({
           ]
         : []),
     ],
-    [canAssign, unassignMutation],
+    [canAssignPatient, unassignMutation],
   );
 
   if (doctorQuery.isError) {
@@ -215,7 +214,7 @@ export default function DoctorDetailView({
               </p>
             </div>
           </div>
-          {canCreate ? (
+          {canCreatePatient ? (
             <Button onClick={() => setAddOpen(true)}>
               <PlusIcon data-icon="inline-start" />
               Add patient
@@ -239,7 +238,7 @@ export default function DoctorDetailView({
           error={patientsQuery.error}
           onRetry={() => void patientsQuery.refetch()}
           emptyMessage={
-            canAssign
+            canAssignPatient
               ? "No patients assigned yet — add one from here."
               : "No patients assigned to this doctor."
           }
@@ -247,7 +246,7 @@ export default function DoctorDetailView({
             <PatientCard
               key={patient.id}
               patient={patient}
-              canAssign={canAssign}
+              canAssign={canAssignPatient}
               onUnassign={(target) => unassignMutation.mutateAsync(target)}
               unassignPending={unassignMutation.isPending}
             />

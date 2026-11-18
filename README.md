@@ -97,7 +97,8 @@ apps/
              app/ holds only thin route files; features/<domain>/ owns
              api.ts (typed fetchers), queries.ts (query-key factory +
              hooks) and components/; lib/ keeps cross-feature client code
-             (fetch wrapper, envelope errors, URL state, session)
+             (fetch wrapper, envelope errors, URL state, permissions hook,
+             session)
   server/    Express REST API (standalone Node/Bun process)
 packages/
   auth/      better-auth config (admin plugin, rate limits) + pure role policy

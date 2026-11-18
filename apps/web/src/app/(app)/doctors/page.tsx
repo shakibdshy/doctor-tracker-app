@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@doctor-tracker-app/ui/components/page-header";
 import { requireSession } from "@/lib/session";
 
 import DoctorsView from "@/features/doctors/components/doctors-view";

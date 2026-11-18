@@ -1,7 +1,7 @@
 import { can } from "@doctor-tracker-app/auth/policy";
 import { redirect } from "next/navigation";
 
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@doctor-tracker-app/ui/components/page-header";
 import { requireSession } from "@/lib/session";
 
 import TeamView from "@/features/team/components/team-view";

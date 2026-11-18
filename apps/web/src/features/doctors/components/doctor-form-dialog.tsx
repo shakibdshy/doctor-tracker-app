@@ -29,7 +29,10 @@ import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { apiFetch, apiErrorMessage, type Doctor } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/api";
+
+import { createDoctor, updateDoctor, type Doctor } from "../api";
+import { doctorKeys } from "../queries";
 
 export type DoctorFormDialogProps = {
   open: boolean;
@@ -82,24 +85,19 @@ export function DoctorFormDialog({
               email: initial.email,
             }
           : EMPTY_VALUES,
-      // keepFieldsRef writes each mounted input directly; the default reset
-      // clears field refs and re-registers a render late, leaving uncontrolled
-      // inputs showing the previous record's values.
-      { keepFieldsRef: true },
+        // keepFieldsRef writes each mounted input directly; the default reset
+        // clears field refs and re-registers a render late, leaving uncontrolled
+        // inputs showing the previous record's values.
+        { keepFieldsRef: true },
       );
     }
   }, [open, initial, reset]);
 
   const mutation = useMutation({
-    mutationFn: (values: DoctorCreateInput) => {
-      const path = initial ? `/api/v1/doctors/${initial.id}` : "/api/v1/doctors";
-      return apiFetch<Doctor>(path, {
-        method: initial ? "PATCH" : "POST",
-        body: JSON.stringify(values),
-      });
-    },
+    mutationFn: (values: DoctorCreateInput) =>
+      initial ? updateDoctor(initial.id, values) : createDoctor(values),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      void queryClient.invalidateQueries({ queryKey: doctorKeys.all });
       toast.success(editing ? "Doctor updated" : "Doctor created");
       onOpenChange(false);
     },

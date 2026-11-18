@@ -1,6 +1,6 @@
 import { requireSession } from "@/lib/session";
 
-import DoctorDetailView from "./doctor-detail-view";
+import DoctorDetailView from "@/features/doctors/components/doctor-detail-view";
 
 export const metadata = { title: "Doctor — Doctor Tracker" };
 

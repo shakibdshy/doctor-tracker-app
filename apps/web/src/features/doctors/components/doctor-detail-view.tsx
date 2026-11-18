@@ -12,14 +12,15 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ArrowLeftIcon, PlusIcon, UnlinkIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
-import { apiFetch, apiErrorMessage, type Doctor } from "@/lib/api";
-import { dateFormatter } from "@/lib/format";
-import { listPatients, type Patient } from "@/features/patients/api";
-import { patientKeys, useOptimisticUnassign } from "@/features/patients/queries";
 import { PatientCard } from "@/features/patients/components/patient-card";
 import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
+import { listPatients, type Patient } from "@/features/patients/api";
+import { patientKeys, useOptimisticUnassign } from "@/features/patients/queries";
+import { dateFormatter } from "@/lib/format";
+
+import type { Doctor } from "../api";
+import { useDoctor } from "../queries";
 
 const DETAIL_PAGE_SIZE = 5;
 
@@ -51,11 +52,7 @@ export default function DoctorDetailView({
     setCursor(cursorsRef.current.get(clamped) ?? null);
   };
 
-  const doctorQuery = useQuery({
-    queryKey: ["doctor", doctorId],
-    queryFn: () => apiFetch<Doctor>(`/api/v1/doctors/${doctorId}`),
-    retry: false,
-  });
+  const doctorQuery = useDoctor(doctorId);
 
   const patientsQuery = useQuery({
     queryKey: patientKeys.list({ doctor: doctorId, page, cursor }),

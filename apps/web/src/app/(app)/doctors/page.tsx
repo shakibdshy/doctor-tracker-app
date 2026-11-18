@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/page-header";
 import { requireSession } from "@/lib/session";
 
-import DoctorsView from "./doctors-view";
+import DoctorsView from "@/features/doctors/components/doctors-view";
 
 export const metadata = { title: "Doctors — Doctor Tracker" };
 

@@ -1,14 +1,3 @@
-/** A doctor record as the envelope returns it (string id, ISO createdAt). */
-export type Doctor = {
-  id: string;
-  name: string;
-  specialization: string;
-  hospital: string;
-  phone: string;
-  email: string;
-  createdAt: string;
-};
-
 /**
  * Pagination metadata from the API envelope (ADR-0003 keyset, mirrors the
  * server shape): `nextCursor` feeds the next page request and `hasMore` ends

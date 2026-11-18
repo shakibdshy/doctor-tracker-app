@@ -18,12 +18,13 @@ import {
   SelectValue,
 } from "@doctor-tracker-app/ui/components/select";
 import { CONDITIONS } from "@doctor-tracker-app/db/schemas/enums";
-import { useQuery } from "@tanstack/react-query";
 import { PencilIcon, PlusIcon, Trash2Icon, UnlinkIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiErrorMessage, apiFetch, type Doctor, type PageMeta } from "@/lib/api";
+import type { Doctor } from "@/features/doctors/api";
+import { useDoctorOptions } from "@/features/doctors/queries";
+import { apiErrorMessage, type PageMeta } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useUrlState } from "@/lib/use-url-state";
@@ -90,10 +91,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
   );
 
   // Doctor filter options: the roster is small enough for one capped page.
-  const { data: doctorOptions } = useQuery({
-    queryKey: ["doctors", "options"],
-    queryFn: () => apiFetch<Doctor[]>("/api/v1/doctors?limit=100"),
-  });
+  const { data: doctorOptions } = useDoctorOptions();
   const doctors = doctorOptions?.data ?? [];
 
   const { data, isLoading, error, refetch, isPlaceholderData } = usePatients(query);

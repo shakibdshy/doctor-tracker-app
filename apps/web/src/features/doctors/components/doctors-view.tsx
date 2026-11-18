@@ -3,7 +3,6 @@
 import { can } from "@doctor-tracker-app/auth/policy";
 import { Badge } from "@doctor-tracker-app/ui/components/badge";
 import { Button } from "@doctor-tracker-app/ui/components/button";
-import { Card } from "@doctor-tracker-app/ui/components/card";
 import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog";
 import { DataTable } from "@doctor-tracker-app/ui/components/data-table";
 import type { DataTableColumn } from "@doctor-tracker-app/ui/components/data-table";
@@ -19,31 +18,23 @@ import {
   SelectValue,
 } from "@doctor-tracker-app/ui/components/select";
 import { SPECIALIZATIONS } from "@doctor-tracker-app/db/schemas/enums";
-import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import Link from "next/link";
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiFetch, apiErrorMessage, type Doctor, type PageMeta } from "@/lib/api";
-import Link from "next/link";
+import { apiErrorMessage, type PageMeta } from "@/lib/api";
+import { dateFormatter } from "@/lib/format";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useUrlState } from "@/lib/use-url-state";
 
+import type { Doctor } from "../api";
+import { useDeleteDoctor, useDoctors } from "../queries";
+import { DoctorCard } from "./doctor-card";
 import { DoctorFormDialog } from "./doctor-form-dialog";
-
-/** Deterministic date rendering — no SSR/client timezone mismatch. */
-const dateFormatter = new Intl.DateTimeFormat("en-CA", {
-  year: "numeric",
-  month: "short",
-  day: "2-digit",
-  timeZone: "UTC",
-});
-
-const DOCTOR_PAGE_SIZE = 10;
 
 export default function DoctorsView({ role }: { role: string | null | undefined }) {
   const { params, setParams } = useUrlState();
-  const queryClient = useQueryClient();
 
   const canCreate = can(role, "doctor:create");
   const canUpdate = can(role, "doctor:update");
@@ -88,24 +79,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
     [params, page, cursor],
   );
 
-  const queryString = useMemo(() => {
-    const search = new URLSearchParams();
-    if (query.search) search.set("search", query.search);
-    if (query.specialization) search.set("specialization", query.specialization);
-    if (query.hospital) search.set("hospital", query.hospital);
-    if (query.from) search.set("from", query.from);
-    if (query.to) search.set("to", query.to);
-    if (query.cursor) search.set("cursor", query.cursor);
-    search.set("limit", String(DOCTOR_PAGE_SIZE));
-    return search.toString();
-  }, [query]);
-
-  const { data, isLoading, error, refetch, isPlaceholderData } = useQuery({
-    queryKey: ["doctors", query],
-    queryFn: () =>
-      apiFetch<Doctor[]>(`/api/v1/doctors?${queryString}`, { method: "GET" }),
-    placeholderData: keepPreviousData,
-  });
+  const { data, isLoading, error, refetch, isPlaceholderData } = useDoctors(query);
 
   // Totals ride only the first page (cursor pages skip the count); keep the
   // last known values so the header and pager don't flicker while paging.
@@ -146,35 +120,18 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Doctor | null>(null);
 
-  const deleteMutation = useMutation({
-    mutationFn: (doctor: Doctor) =>
-      apiFetch<{ id: string }>(`/api/v1/doctors/${doctor.id}`, { method: "DELETE" }),
-    onSuccess: (_result, doctor) => {
-      toast.success(`${doctor.name} deleted — their patients are now unassigned`);
-      void queryClient.invalidateQueries({ queryKey: ["doctors"] });
-    },
-    onError: (deleteError) => {
-      toast.error(apiErrorMessage(deleteError));
-    },
-  });
+  const deleteMutation = useDeleteDoctor();
 
-  const deleteButton = (doctor: Doctor, withLabel = false) => (
+  const deleteButton = (doctor: Doctor) => (
     <ConfirmDialog
       trigger={
-        withLabel ? (
-          <Button variant="destructive" size="sm">
-            <Trash2Icon data-icon="inline-start" />
-            Delete
-          </Button>
-        ) : (
-          <Button
-            variant="destructive"
-            size="icon-sm"
-            aria-label={`Delete ${doctor.name}`}
-          >
-            <Trash2Icon />
-          </Button>
-        )
+        <Button
+          variant="destructive"
+          size="icon-sm"
+          aria-label={`Delete ${doctor.name}`}
+        >
+          <Trash2Icon />
+        </Button>
       }
       title={`Delete ${doctor.name}?`}
       description="The doctor is deleted from the roster and their patients become unassigned. This cannot be undone."
@@ -281,40 +238,15 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
   };
 
   const doctorCard = (doctor: Doctor) => (
-    <Card key={doctor.id} className="gap-3 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <Link
-            href={`/doctors/${doctor.id}`}
-            className="text-[15px] font-semibold underline-offset-4 hover:text-primary hover:underline"
-          >
-            {doctor.name}
-          </Link>
-          <p className="text-muted-foreground truncate text-[13px]">{doctor.hospital}</p>
-        </div>
-        <Badge variant="secondary">{doctor.specialization}</Badge>
-      </div>
-      <div className="text-muted-foreground space-y-0.5 font-mono text-[13px]">
-        <p>{doctor.phone}</p>
-        <p className="truncate">{doctor.email}</p>
-        <p className="tabular-nums">Added {dateFormatter.format(new Date(doctor.createdAt))}</p>
-      </div>
-      {canUpdate || canDelete ? (
-        <div className="flex items-center justify-end gap-1 border-t border-border/60 pt-2.5">
-          {canUpdate ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setEditing(doctor)}
-            >
-              <PencilIcon data-icon="inline-start" />
-              Edit
-            </Button>
-          ) : null}
-          {canDelete ? deleteButton(doctor, true) : null}
-        </div>
-      ) : null}
-    </Card>
+    <DoctorCard
+      key={doctor.id}
+      doctor={doctor}
+      canUpdate={canUpdate}
+      canDelete={canDelete}
+      onEdit={setEditing}
+      onDelete={(target) => deleteMutation.mutateAsync(target)}
+      deletePending={deleteMutation.isPending}
+    />
   );
 
   return (

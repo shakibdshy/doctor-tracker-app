@@ -33,7 +33,7 @@ import { Controller, useForm } from "react-hook-form";
 import type { z } from "zod";
 import { toast } from "sonner";
 
-import type { Doctor } from "@/lib/api";
+import type { Doctor } from "@/features/doctors/api";
 
 import { createPatient, updatePatient, type Patient } from "../api";
 import { patientKeys, usePatient } from "../queries";

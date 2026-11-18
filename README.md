@@ -12,6 +12,8 @@
 ![better-auth](https://img.shields.io/badge/better--auth-RBAC-6D28D9)
 ![Tests](https://img.shields.io/badge/tests-35_passing-22C55E)
 
+**Live demo: [https://doc-tracker-web-one.vercel.app](https://doc-tracker-web-one.vercel.app/)**
+
 | Desktop — light | Desktop — dark |
 | --- | --- |
 | ![Desktop light dashboard](docs/screenshots/desktop-light-dashboard.png) | ![Desktop dark dashboard](docs/screenshots/desktop-dark-dashboard.png) |
@@ -20,7 +22,7 @@
 
 ## Try the demo
 
-Sign-up is deliberately disabled — accounts are provisioned internally by an Admin (Team page) or by the seed script. Use either role to explore the permission model:
+Open the [live demo](https://doc-tracker-web-one.vercel.app/) and sign in with either role below. Sign-up is deliberately disabled — accounts are provisioned internally by an Admin (Team page) or by the seed script. Use either role to explore the permission model:
 
 | Role  | Email                  | Password      | What you can do |
 | ----- | ---------------------- | ------------- | --------------- |

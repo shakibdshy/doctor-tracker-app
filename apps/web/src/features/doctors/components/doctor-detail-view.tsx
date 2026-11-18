@@ -7,15 +7,14 @@ import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog"
 import { DataTable } from "@doctor-tracker-app/ui/components/data-table";
 import type { DataTableColumn } from "@doctor-tracker-app/ui/components/data-table";
 import { ListPagination } from "@doctor-tracker-app/ui/components/pagination";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ArrowLeftIcon, PlusIcon, UnlinkIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PatientCard } from "@/features/patients/components/patient-card";
 import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
-import { listPatients, type Patient } from "@/features/patients/api";
-import { patientKeys, useOptimisticUnassign } from "@/features/patients/queries";
+import { type Patient } from "@/features/patients/api";
+import { patientKeys, useOptimisticUnassign, usePatients } from "@/features/patients/queries";
 import { dateFormatter } from "@/lib/format";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -53,11 +52,11 @@ export default function DoctorDetailView({
 
   const doctorQuery = useDoctor(doctorId);
 
-  const patientsQuery = useQuery({
-    queryKey: patientKeys.list({ doctor: doctorId, page, cursor }),
-    queryFn: () => listPatients({ doctor: doctorId, cursor, limit: DETAIL_PAGE_SIZE }),
-    placeholderData: keepPreviousData,
-  });
+  // The doctor's assigned patients list paginates with local state and a
+  // tighter page size (5 vs 10). One query object addresses both the cache
+  // entry and the optimistic unassign below, so they can never drift apart.
+  const assignedQuery = { doctor: doctorId, page, cursor, limit: DETAIL_PAGE_SIZE };
+  const patientsQuery = usePatients(assignedQuery);
 
   // Totals ride only the first page; keep the last known values so the
   // header and pager don't flicker while paging. Placeholder data (the
@@ -76,10 +75,7 @@ export default function DoctorDetailView({
   // Unassign from this doctor's list is optimistic, same contract as the
   // patients page — the record joins the unassigned pool.
   // This list is the doctor's assignment, so unassignment removes the row.
-  const unassignMutation = useOptimisticUnassign(
-    patientKeys.list({ doctor: doctorId, page, cursor }),
-    "removeRow",
-  );
+  const unassignMutation = useOptimisticUnassign(patientKeys.list(assignedQuery), "removeRow");
 
   const doctor = doctorQuery.data?.data;
 

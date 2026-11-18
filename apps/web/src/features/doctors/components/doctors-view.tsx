@@ -24,8 +24,8 @@ import { toast } from "sonner";
 
 import { apiErrorMessage } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
-import { usePermissions } from "@/lib/use-permissions";
-import { useKeysetList } from "@/lib/use-keyset-list";
+import { usePermissions } from "@/hooks/use-permissions";
+import { useKeysetList } from "@/hooks/use-keyset-list";
 
 import type { Doctor, DoctorListQuery } from "../api";
 import { useDeleteDoctor, useDoctors } from "../queries";

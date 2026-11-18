@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PageMeta } from "@/lib/api";
-import { useDebouncedValue } from "@/lib/use-debounced-value";
-import { useUrlState } from "@/lib/use-url-state";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useUrlState } from "@/hooks/use-url-state";
 
 const SEARCH_DEBOUNCE_MS = 300;
 

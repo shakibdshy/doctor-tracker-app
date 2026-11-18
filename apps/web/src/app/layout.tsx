@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Fragment_Mono, Fraunces, Schibsted_Grotesk } from "next/font/google";
 
 import "../index.css";
-import Providers from "@/components/providers";
+import Providers from "./providers";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",

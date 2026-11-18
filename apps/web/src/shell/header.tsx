@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
-import { usePermissions } from "@/lib/use-permissions";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import { ModeToggle } from "./mode-toggle";
 import { NAV } from "./nav-items";

@@ -17,7 +17,7 @@ import { PatientFormDialog } from "@/features/patients/components/patient-form-d
 import { listPatients, type Patient } from "@/features/patients/api";
 import { patientKeys, useOptimisticUnassign } from "@/features/patients/queries";
 import { dateFormatter } from "@/lib/format";
-import { usePermissions } from "@/lib/use-permissions";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import type { Doctor } from "../api";
 import { useDoctor } from "../queries";

@@ -25,8 +25,8 @@ import type { Doctor } from "@/features/doctors/api";
 import { useDoctorOptions } from "@/features/doctors/queries";
 import { apiErrorMessage } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
-import { usePermissions } from "@/lib/use-permissions";
-import { useKeysetList } from "@/lib/use-keyset-list";
+import { usePermissions } from "@/hooks/use-permissions";
+import { useKeysetList } from "@/hooks/use-keyset-list";
 
 import type { Patient, PatientListQuery } from "../api";
 import {

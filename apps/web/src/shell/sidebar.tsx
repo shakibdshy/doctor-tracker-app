@@ -12,7 +12,7 @@ import { usePathname } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
 import { initialsOf } from "@/lib/format";
-import { usePermissions } from "@/lib/use-permissions";
+import { usePermissions } from "@/hooks/use-permissions";
 
 import { AccountMenuItems } from "./account-menu";
 import { ModeToggle } from "./mode-toggle";

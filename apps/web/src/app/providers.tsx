@@ -2,10 +2,13 @@
 
 import { Toaster } from "@doctor-tracker-app/ui/components/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 import * as React from "react";
 
-import { ThemeProvider } from "./theme-provider";
-
+/**
+ * App-root providers: TanStack Query cache, theme (class strategy), toasts.
+ * Lives with the root layout — this is application wiring, not feature UI.
+ */
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(
     () =>
@@ -28,4 +31,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       </ThemeProvider>
     </QueryClientProvider>
   );
+}
+
+/** Thin typed wrapper around next-themes' provider (class strategy). */
+function ThemeProvider({
+  children,
+  ...props
+}: React.ComponentProps<typeof NextThemesProvider>) {
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
 }

@@ -1,5 +1,5 @@
-import Header from "@/components/header";
-import { Sidebar } from "@/components/sidebar";
+import Header from "@/shell/header";
+import { Sidebar } from "@/shell/sidebar";
 
 /**
  * Shell for every authenticated surface: pine sidebar on desktop, top bar

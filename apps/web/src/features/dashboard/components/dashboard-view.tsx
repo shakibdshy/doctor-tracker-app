@@ -6,11 +6,9 @@ import { Skeleton } from "@doctor-tracker-app/ui/components/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@doctor-tracker-app/ui/components/empty";
 import { Button } from "@doctor-tracker-app/ui/components/button";
 import { ChartBarIcon, ChartPieIcon, StethoscopeIcon, TrendingUpIcon, RefreshCcwIcon, UserPlusIcon, UsersIcon, UserXIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
-import { apiFetch, apiErrorMessage } from "@/lib/api";
-import type { ConditionBreakdown, IntakeBucket, PatientsPerDoctor } from "./dashboard-charts";
+import { useDashboard } from "../queries";
 
 // Charts are client-only, code-split chunks: first paint renders the card
 // frames and KPIs without the recharts bundle.
@@ -26,18 +24,6 @@ const ConditionDonut = dynamic(
   () => import("./dashboard-charts").then((m) => m.ConditionDonut),
   { ssr: false, loading: () => <ChartSkeleton /> },
 );
-
-type DashboardSummary = {
-  kpis: {
-    totalDoctors: number;
-    totalPatients: number;
-    unassignedPatients: number;
-    newPatientsThisMonth: number;
-  };
-  monthlyIntake: IntakeBucket[];
-  patientsPerDoctor: PatientsPerDoctor[];
-  conditionBreakdown: ConditionBreakdown[];
-};
 
 function ChartSkeleton() {
   return (
@@ -66,10 +52,7 @@ function KpiSkeletons() {
 }
 
 export default function Dashboard() {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: () => apiFetch<DashboardSummary>("/api/v1/dashboard"),
-  });
+  const { data, isLoading, error, refetch } = useDashboard();
 
   if (error) {
     return (

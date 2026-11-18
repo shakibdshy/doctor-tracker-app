@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/page-header";
 import { requireSession } from "@/lib/session";
 
-import Dashboard from "./dashboard";
+import Dashboard from "@/features/dashboard/components/dashboard-view";
 
 export const metadata = { title: "Dashboard — Doctor Tracker" };
 

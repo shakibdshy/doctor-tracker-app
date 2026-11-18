@@ -23,9 +23,7 @@ import {
   YAxis,
 } from "recharts";
 
-export type IntakeBucket = { label: string; count: number };
-export type PatientsPerDoctor = { doctorId: string; doctorName: string; count: number };
-export type ConditionBreakdown = { condition: string; count: number };
+import type { ConditionBreakdown, IntakeBucket, PatientsPerDoctor } from "../api";
 
 const intakeConfig = {
   count: { label: "New patients", color: "var(--chart-1)" },

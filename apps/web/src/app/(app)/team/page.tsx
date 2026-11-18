@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { requireSession } from "@/lib/session";
 
-import TeamView from "./team-view";
+import TeamView from "@/features/team/components/team-view";
 
 export const metadata = { title: "Team — Doctor Tracker" };
 

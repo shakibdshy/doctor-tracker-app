@@ -11,7 +11,7 @@ import { ListPagination } from "@doctor-tracker-app/ui/components/pagination";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ArrowLeftIcon, PlusIcon, UnlinkIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { apiFetch, apiErrorMessage, type Doctor, type Patient } from "@/lib/api";
@@ -33,8 +33,23 @@ export default function DoctorDetailView({
   const canCreate = can(role, "patient:create");
   const canAssign = can(role, "patient:assign");
 
+  // Keyset pagination (ADR-0003): local state instead of URL params (this
+  // page has no filter context). Each visited page's cursor is remembered in
+  // a stack for Previous to walk back.
   const [page, setPage] = useState(1);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const cursorsRef = useRef(new Map<number, string | null>([[1, null]]));
+  const [knownTotals, setKnownTotals] = useState<{ total: number; totalPages: number } | null>(
+    null,
+  );
   const [addOpen, setAddOpen] = useState(false);
+
+  const gotoPage = (target: number) => {
+    const clamped = Math.max(1, target);
+    if (clamped === page) return;
+    setPage(clamped);
+    setCursor(cursorsRef.current.get(clamped) ?? null);
+  };
 
   const doctorQuery = useQuery({
     queryKey: ["doctor", doctorId],
@@ -43,21 +58,35 @@ export default function DoctorDetailView({
   });
 
   const patientsQuery = useQuery({
-    queryKey: ["patients", { doctor: doctorId, page }],
+    queryKey: ["patients", { doctor: doctorId, page, cursor }],
     queryFn: () =>
       apiFetch<Patient[]>(
-        `/api/v1/patients?doctor=${doctorId}&page=${page}&limit=${DETAIL_PAGE_SIZE}`,
+        `/api/v1/patients?doctor=${doctorId}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}&limit=${DETAIL_PAGE_SIZE}`,
       ),
     placeholderData: keepPreviousData,
   });
 
-  const patientsListKey = ["patients", { doctor: doctorId, page }] as const;
+  // Totals ride only the first page; keep the last known values so the
+  // header and pager don't flicker while paging. Placeholder data (the
+  // previous page's response during a fetch) never updates them.
+  const meta = !patientsQuery.isPlaceholderData ? patientsQuery.data?.meta : undefined;
+  useEffect(() => {
+    if (meta?.total !== undefined) {
+      setKnownTotals({ total: meta.total, totalPages: meta.totalPages ?? 1 });
+    }
+  }, [meta]);
+  useEffect(() => {
+    cursorsRef.current.set(page, cursor);
+    if (meta?.nextCursor) cursorsRef.current.set(page + 1, meta.nextCursor);
+  }, [page, cursor, meta]);
+
+  const patientsListKey = ["patients", { doctor: doctorId, page, cursor }] as const;
 
   // Unassign from this doctor's list is optimistic, same contract as the
   // patients page — the record joins the unassigned pool.
   // This list is the doctor's assignment, so unassignment removes the row.
   const unassignMutation = useOptimisticUnassign(
-    ["patients", { doctor: doctorId, page }],
+    ["patients", { doctor: doctorId, page, cursor }],
     "removeRow",
   );
 
@@ -154,8 +183,6 @@ export default function DoctorDetailView({
     );
   }
 
-  const patientsMeta = patientsQuery.data?.meta;
-
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -209,7 +236,7 @@ export default function DoctorDetailView({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3 max-lg:border-b-0 max-lg:px-0 max-lg:pt-0 max-lg:pb-3">
           <p className="text-[13px] font-medium">Assigned patients</p>
           <p className="text-muted-foreground text-[13px] tabular-nums">
-            {patientsMeta ? `${patientsMeta.total} total` : "Loading…"}
+            {knownTotals ? `${knownTotals.total} total` : "Loading…"}
           </p>
         </div>
         <DataTable
@@ -234,13 +261,14 @@ export default function DoctorDetailView({
             />
           )}
         />
-        {patientsMeta && patientsMeta.total > 0 ? (
+        {meta && (patientsQuery.data?.data.length || (knownTotals?.total ?? 0) > 0) ? (
           <div className="border-t border-border/70 px-4 py-3 max-lg:border-t-0 max-lg:px-0 max-lg:pt-3 max-lg:pb-0">
             <ListPagination
-              page={patientsMeta.page}
-              totalPages={patientsMeta.totalPages}
-              total={patientsMeta.total}
-              onPageChange={setPage}
+              page={page}
+              totalPages={knownTotals?.totalPages}
+              total={knownTotals?.total}
+              hasMore={meta.hasMore}
+              onPageChange={gotoPage}
             />
           </div>
         ) : null}

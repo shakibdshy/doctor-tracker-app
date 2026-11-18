@@ -85,12 +85,12 @@ describe("doctors service — listDoctors", () => {
     const newest = await insertDoctor({ name: "New Doctor", createdAt: new Date("2026-06-15") });
 
     const { data, meta } = await listDoctors({
-      page: 1,
       limit: 2,
     } as never);
 
     expect(meta.total).toBe(3);
     expect(meta.totalPages).toBe(2);
+    expect(meta.hasMore).toBe(true);
     expect(data.map((doctor) => doctor.id)).toEqual([newest.id, mid.id].map(String));
     expect(data[0]).not.toHaveProperty("nameLower");
     expect(data[0]).toHaveProperty("name");
@@ -103,7 +103,7 @@ describe("doctors service — listDoctors", () => {
     await insertDoctor({ name: "Joanna Reed" });
     await insertDoctor({ hospital: "St. John's Clinic", name: "Hospital Match" });
 
-    const { data, meta } = await listDoctors({ page: 1, limit: 20, search: "joh" } as never);
+    const { data, meta } = await listDoctors({ limit: 20, search: "joh" } as never);
 
     // Field-start anchoring only (ADR-0001): matches "Johnathan" (name);
     // "Mary Johnson" starts with "mary", "ajohnson@…" starts with "a",
@@ -117,11 +117,11 @@ describe("doctors service — listDoctors", () => {
     await insertDoctor({ hospital: "Johns Memorial", name: "Doctor A" });
     await insertDoctor({ email: "john.doe@hospital.test", name: "Doctor B" });
 
-    const byHospital = await listDoctors({ page: 1, limit: 20, search: "johns" } as never);
+    const byHospital = await listDoctors({ limit: 20, search: "johns" } as never);
     expect(byHospital.meta.total).toBe(1);
     expect(byHospital.data[0]?.name).toBe("Doctor A");
 
-    const byEmail = await listDoctors({ page: 1, limit: 20, search: "john.doe" } as never);
+    const byEmail = await listDoctors({ limit: 20, search: "john.doe" } as never);
     expect(byEmail.meta.total).toBe(1);
     expect(byEmail.data[0]?.name).toBe("Doctor B");
   });
@@ -132,12 +132,12 @@ describe("doctors service — listDoctors", () => {
     await insertDoctor({ name: "abweird filler", email: "ab@hospital.test" });
 
     // "(" is literal: matches the name that starts with it, nothing else.
-    const paren = await listDoctors({ page: 1, limit: 20, search: "(we" } as never);
+    const paren = await listDoctors({ limit: 20, search: "(we" } as never);
     expect(paren.meta.total).toBe(1);
     expect(paren.data[0]?.name).toBe("(Weird) Name");
 
     // "." is literal: "a.we" must not wildcard-match "abweird".
-    const dot = await listDoctors({ page: 1, limit: 20, search: "a.we" } as never);
+    const dot = await listDoctors({ limit: 20, search: "a.we" } as never);
     expect(dot.meta.total).toBe(1);
     expect(dot.data[0]?.name).toBe("A.Weird.ordinary");
   });
@@ -150,7 +150,6 @@ describe("doctors service — listDoctors", () => {
     await insertDoctor({ name: "Old Cardio", createdAt: new Date("2025-12-01") });
 
     const bySpecialization = await listDoctors({
-      page: 1,
       limit: 20,
       specialization: "Cardiology",
     } as never);
@@ -158,7 +157,6 @@ describe("doctors service — listDoctors", () => {
     expect(bySpecialization.meta.total).toBe(4);
 
     const byHospital = await listDoctors({
-      page: 1,
       limit: 20,
       hospital: "st.",
     } as never);
@@ -167,7 +165,6 @@ describe("doctors service — listDoctors", () => {
     expect(byHospital.meta.total).toBe(4);
 
     const byRange = await listDoctors({
-      page: 1,
       limit: 20,
       from: "2026-01-01",
       to: "2026-12-31",
@@ -175,13 +172,56 @@ describe("doctors service — listDoctors", () => {
     expect(byRange.meta.total).toBe(4);
 
     const combined = await listDoctors({
-      page: 1,
       limit: 20,
       specialization: "Cardiology",
       hospital: "northside",
     } as never);
     expect(combined.meta.total).toBe(1);
     expect(combined.data[0]?.name).toBe("Other Hospital");
+  });
+});
+
+describe("doctors service — keyset pagination (ADR-0003)", () => {
+  test("walks pages by cursor; cursor pages carry no count", async () => {
+    const oldest = await insertDoctor({ name: "Old Doctor", createdAt: new Date("2026-01-15") });
+    const mid = await insertDoctor({ name: "Mid Doctor", createdAt: new Date("2026-03-15") });
+    const newest = await insertDoctor({ name: "New Doctor", createdAt: new Date("2026-06-15") });
+
+    const page1 = await listDoctors({ limit: 2 } as never);
+    expect(page1.meta.total).toBe(3);
+    expect(page1.meta.hasMore).toBe(true);
+    expect(page1.meta.nextCursor).toBeTypeOf("string");
+    expect(page1.data.map((doctor) => doctor.id)).toEqual([newest.id, mid.id].map(String));
+
+    const page2 = await listDoctors({
+      limit: 2,
+      cursor: page1.meta.nextCursor!,
+    } as never);
+    expect(page2.meta.total).toBeUndefined();
+    expect(page2.meta.totalPages).toBeUndefined();
+    expect(page2.meta.hasMore).toBe(false);
+    expect(page2.meta.nextCursor).toBeNull();
+    expect(page2.data.map((doctor) => doctor.id)).toEqual([oldest.id].map(String));
+  });
+
+  test("keyset composes with search filters", async () => {
+    for (let i = 0; i < 5; i++) {
+      await insertDoctor({ name: `John Doctor ${i}`, createdAt: new Date(Date.UTC(2026, i, 1)) });
+    }
+    await insertDoctor({ name: "Unrelated", createdAt: new Date("2026-02-02") });
+
+    const page1 = await listDoctors({ limit: 2, search: "john" } as never);
+    expect(page1.meta.total).toBe(5);
+    expect(page1.data).toHaveLength(2);
+    const page2 = await listDoctors({
+      limit: 2,
+      search: "john",
+      cursor: page1.meta.nextCursor!,
+    } as never);
+    expect(page2.data).toHaveLength(2);
+    expect(page2.meta.hasMore).toBe(true);
+    // The cursor page must not leak the non-matching doctor.
+    expect(page2.data.every((doctor) => doctor.name.startsWith("John"))).toBe(true);
   });
 });
 
@@ -203,9 +243,9 @@ describe("doctors service — create/update", () => {
     });
     expect(updated.name).toBe("Renamed Doctor");
 
-    const byNewName = await listDoctors({ page: 1, limit: 20, search: "rename" } as never);
+    const byNewName = await listDoctors({ limit: 20, search: "rename" } as never);
     expect(byNewName.meta.total).toBe(1);
-    const byOldName = await listDoctors({ page: 1, limit: 20, search: "amara" } as never);
+    const byOldName = await listDoctors({ limit: 20, search: "amara" } as never);
     expect(byOldName.meta.total).toBe(0);
   });
 
@@ -284,7 +324,7 @@ describe("doctors service — explain paths (ADR-0001)", () => {
 
     async function assertIndexScan(filter: Record<string, unknown>) {
       const explain = await Doctor.find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1, _id: -1 })
         .limit(20)
         .explain("executionStats");
       const plan = (explain as { queryPlanner?: { winningPlan?: Record<string, unknown> } }).queryPlanner?.winningPlan;

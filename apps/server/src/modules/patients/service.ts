@@ -8,8 +8,10 @@ import type {
 import { exclusiveTo } from "@doctor-tracker-app/db/schemas/shared";
 import { Types } from "mongoose";
 
+import { decodeCursor, encodeCursor } from "../../http/cursor";
 import { AppError } from "../../http/errors";
 import type { PageMeta } from "../../http/envelope";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 /** The fields the list tables render; doctor resolved to { id, name }. */
 const LIST_PROJECTION = "name phone gender dateOfBirth condition doctor notes createdAt";
@@ -87,28 +89,50 @@ export async function listPatients(
   const createdAtRange = exclusiveTo(query);
   if (Object.keys(createdAtRange).length > 0) conditions.push({ createdAt: createdAtRange });
 
+  // Keyset predicate (ADR-0003): strictly-after the cursor position in the
+  // (createdAt: -1, _id: -1) order. Each $or branch is index-backed by the
+  // same compound indexes the equality filters use — no skip cost at depth.
+  const cursor = query.cursor ? decodeCursor(query.cursor) : null;
+  if (cursor) {
+    conditions.push({
+      $or: [
+        { createdAt: { $lt: cursor.createdAt } },
+        { createdAt: cursor.createdAt, _id: { $lt: new Types.ObjectId(cursor.id) } },
+      ],
+    });
+  }
+
   const filter =
     conditions.length > 1 ? { $and: conditions } : (conditions[0] ?? {});
 
-  // The single cast adapts the plain filter to the driver's mapped generics.
+  // limit+1 peek detects hasMore without a second query; the extra doc is
+  // trimmed before mapping. The count runs only on the first page — the one
+  // place the pager shows record totals.
   const [docs, total] = await Promise.all([
     Patient.find(filter as never)
-      .sort({ createdAt: -1 })
-      .skip((query.page - 1) * query.limit)
-      .limit(query.limit)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(query.limit + 1)
       .select(LIST_PROJECTION)
       .populate("doctor", "name")
       .lean(),
-    Patient.countDocuments(filter as never),
+    cursor ? Promise.resolve(null) : Patient.countDocuments(filter as never),
   ]);
 
+  const hasMore = docs.length > query.limit;
+  const page = docs.slice(0, query.limit);
+  const last = page.at(-1);
+
   return {
-    data: docs.map((doc) => toItem(doc as unknown as PatientRecord)),
+    data: page.map((doc) => toItem(doc as unknown as PatientRecord)),
     meta: {
-      page: query.page,
       limit: query.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+      hasMore,
+      // A cursor only exists if there is a next page to feed it to.
+      nextCursor: hasMore && last ? encodeCursor(last.createdAt, last._id.toString()) : null,
+      ...(total !== null && {
+        total,
+        totalPages: Math.max(1, Math.ceil(total / query.limit)),
+      }),
     },
   };
 }
@@ -138,6 +162,7 @@ export async function createPatient(input: PatientCreateInput): Promise<PatientD
     doctor: input.doctorId ? new Types.ObjectId(input.doctorId) : null,
     ...shadowFields(input),
   });
+  invalidateDashboardCache();
   return getPatient(patient._id.toString());
 }
 
@@ -167,6 +192,7 @@ export async function updatePatient(
   Object.assign(patient, shadowFields({ name: patient.name, phone: patient.phone }));
 
   await patient.save();
+  invalidateDashboardCache();
   return getPatient(patient._id.toString());
 }
 
@@ -175,5 +201,6 @@ export async function deletePatient(id: string): Promise<{ id: string }> {
   const patient = await Patient.findById(id).select("_id").lean();
   if (!patient) throw AppError.notFound("Patient not found");
   await Patient.deleteOne({ _id: patient._id });
+  invalidateDashboardCache();
   return { id: (patient._id as Types.ObjectId).toString() };
 }

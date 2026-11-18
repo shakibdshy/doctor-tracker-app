@@ -1,11 +1,18 @@
 import type { Response } from "express";
 
-/** Pagination metadata attached to successful list responses. */
+/**
+ * Pagination metadata attached to successful list responses (ADR-0003,
+ * keyset): `nextCursor` feeds the next page request and `hasMore` ends the
+ * walk — no offset cost at depth. `total`/`totalPages` ride only the first
+ * page of a listing (the one place the pager shows record totals); cursor
+ * pages skip the count query and clients keep the last known totals.
+ */
 export type PageMeta = {
-  page: number;
   limit: number;
-  total: number;
-  totalPages: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+  total?: number;
+  totalPages?: number;
 };
 
 export type SuccessBody<T> = { success: true; data: T; meta?: PageMeta };

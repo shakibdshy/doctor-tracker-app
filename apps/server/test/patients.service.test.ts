@@ -85,10 +85,11 @@ describe("patients service — listPatients", () => {
     const old = await insertPatient(doctor.id, { name: "Old Patient", createdAt: new Date("2026-01-10") });
     const newest = await insertPatient(doctor.id, { name: "New Patient", createdAt: new Date("2026-06-10") });
 
-    const { data, meta } = await listPatients({ page: 1, limit: 1 });
+    const { data, meta } = await listPatients({ limit: 1 });
 
     expect(meta.total).toBe(2);
     expect(meta.totalPages).toBe(2);
+    expect(meta.hasMore).toBe(true);
     expect(data.map((patient) => patient.id)).toEqual([newest.id]);
     expect(data[0]?.doctor).toEqual({ id: doctor.id, name: doctor.name });
     expect(data[0]).not.toHaveProperty("nameLower");
@@ -102,15 +103,15 @@ describe("patients service — listPatients", () => {
 
     // Field-start anchoring (ADR-0001): "marsh" only matches names that
     // START with it — surnames mid-field don't match.
-    const byName = await listPatients({ page: 1, limit: 20, search: "alice" });
+    const byName = await listPatients({ limit: 20, search: "alice" });
     expect(byName.meta.total).toBe(1);
-    const byBob = await listPatients({ page: 1, limit: 20, search: "bob" });
+    const byBob = await listPatients({ limit: 20, search: "bob" });
     expect(byBob.meta.total).toBe(1);
 
-    const midWord = await listPatients({ page: 1, limit: 20, search: "arshal" });
+    const midWord = await listPatients({ limit: 20, search: "arshal" });
     expect(midWord.meta.total).toBe(0);
 
-    const byPhone = await listPatients({ page: 1, limit: 20, search: "+1 555-077" });
+    const byPhone = await listPatients({ limit: 20, search: "+1 555-077" });
     expect(byPhone.meta.total).toBe(2);
   });
 
@@ -122,14 +123,14 @@ describe("patients service — listPatients", () => {
     await insertPatient(doctorB.id, { name: "B-Asthma", condition: "Asthma" });
     await insertPatient(null, { name: "Pool Asthma", condition: "Asthma" });
 
-    const byCondition = await listPatients({ page: 1, limit: 20, condition: "Asthma" });
+    const byCondition = await listPatients({ limit: 20, condition: "Asthma" });
     expect(byCondition.meta.total).toBe(3);
 
-    const byDoctor = await listPatients({ page: 1, limit: 20, doctor: doctorA.id });
+    const byDoctor = await listPatients({ limit: 20, doctor: doctorA.id });
     expect(byDoctor.meta.total).toBe(2);
     expect(byDoctor.data.every((patient) => patient.doctor?.id === doctorA.id)).toBe(true);
 
-    const unassigned = await listPatients({ page: 1, limit: 20, doctor: "unassigned" });
+    const unassigned = await listPatients({ limit: 20, doctor: "unassigned" });
     expect(unassigned.meta.total).toBe(1);
     expect(unassigned.data[0]?.name).toBe("Pool Asthma");
     expect(unassigned.data[0]?.doctor).toBeNull();
@@ -140,12 +141,99 @@ describe("patients service — listPatients", () => {
     await insertPatient(null, { name: "May Patient", createdAt: new Date("2026-05-02T10:00:00Z") });
 
     const { meta } = await listPatients({
-      page: 1,
       limit: 20,
       from: "2026-06-01",
       to: "2026-06-30",
     } as never);
     expect(meta.total).toBe(1);
+  });
+});
+
+describe("patients service — keyset pagination (ADR-0003)", () => {
+  test("walks pages by cursor; only the first page pays for a count", async () => {
+    const oldest = await insertPatient(null, { name: "Old", createdAt: new Date("2026-01-01") });
+    const middle = await insertPatient(null, { name: "Mid", createdAt: new Date("2026-02-01") });
+    const newest = await insertPatient(null, { name: "New", createdAt: new Date("2026-03-01") });
+
+    const page1 = await listPatients({ limit: 2 });
+    expect(page1.meta.total).toBe(3);
+    expect(page1.meta.totalPages).toBe(2);
+    expect(page1.meta.hasMore).toBe(true);
+    expect(page1.meta.nextCursor).toBeTypeOf("string");
+    expect(page1.data.map((p) => p.id)).toEqual([newest.id, middle.id]);
+
+    const page2 = await listPatients({ limit: 2, cursor: page1.meta.nextCursor! });
+    // Cursor pages skip the count — no totals in their meta.
+    expect(page2.meta.total).toBeUndefined();
+    expect(page2.meta.totalPages).toBeUndefined();
+    expect(page2.meta.hasMore).toBe(false);
+    expect(page2.meta.nextCursor).toBeNull();
+    expect(page2.data.map((p) => p.id)).toEqual([oldest.id]);
+  });
+
+  test("keyset continues correctly across equal createdAt values (id tie-break)", async () => {
+    const sameTime = new Date("2026-05-05T12:00:00Z");
+    const created = [];
+    for (let i = 0; i < 3; i++) {
+      created.push(await insertPatient(null, { name: `Tie ${i}`, createdAt: sameTime }));
+    }
+
+    const page1 = await listPatients({ limit: 1 });
+    expect(page1.data).toHaveLength(1);
+    const page2 = await listPatients({ limit: 1, cursor: page1.meta.nextCursor! });
+    expect(page2.data).toHaveLength(1);
+    const page3 = await listPatients({ limit: 1, cursor: page2.meta.nextCursor! });
+    expect(page3.data).toHaveLength(1);
+    expect(page3.meta.hasMore).toBe(false);
+
+    // No doc repeats and all three are covered.
+    const ids = [
+      ...page1.data,
+      ...page2.data,
+      ...page3.data,
+    ].map((p) => p.id);
+    expect(new Set(ids).size).toBe(3);
+    expect(ids).toContain(created[0]!.id);
+    expect(ids).toContain(created[1]!.id);
+    expect(ids).toContain(created[2]!.id);
+  });
+
+  test("keyset composes with filters", async () => {
+    const doctor = await insertDoctor();
+    const conditions = ["Asthma", "Migraine", "Asthma", "Asthma", "Asthma"] as const;
+    for (let i = 0; i < conditions.length; i++) {
+      await insertPatient(doctor.id, {
+        name: `F${i}`,
+        condition: conditions[i],
+        createdAt: new Date(Date.UTC(2026, i, 1)),
+      });
+    }
+
+    const page1 = await listPatients({ limit: 2, condition: "Asthma", doctor: doctor.id });
+    expect(page1.meta.total).toBe(4);
+    expect(page1.data).toHaveLength(2);
+    const page2 = await listPatients({
+      limit: 2,
+      condition: "Asthma",
+      doctor: doctor.id,
+      cursor: page1.meta.nextCursor!,
+    });
+    expect(page2.data).toHaveLength(2);
+    expect(page2.meta.hasMore).toBe(false);
+    // The cursor page must not leak the excluded condition's rows.
+    expect(page2.data.every((p) => p.condition === "Asthma")).toBe(true);
+  });
+
+  test("a malformed cursor fails as a 400, never a wrong page", async () => {
+    await insertPatient(null, { name: "Solo" });
+    for (const garbage of ["not-a-cursor", "e30=", "___"]) {
+      try {
+        await listPatients({ limit: 20, cursor: garbage });
+        throw new Error(`expected 400 for cursor: ${garbage}`);
+      } catch (error) {
+        expect((error as { status?: number }).status).toBe(400);
+      }
+    }
   });
 });
 
@@ -253,7 +341,7 @@ describe("patients service — explain paths (compound indexes)", () => {
 
     async function assertIndexScan(filter: Record<string, unknown>) {
       const explain = await Patient.find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1, _id: -1 })
         .limit(20)
         .explain("executionStats");
       const plan = (explain as { queryPlanner?: { winningPlan?: Record<string, unknown> } })

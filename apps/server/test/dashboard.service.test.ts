@@ -4,7 +4,8 @@ import { Doctor } from "@doctor-tracker-app/db/models/doctor.model";
 import mongoose from "mongoose";
 import { beforeEach, afterEach, describe, expect, test } from "bun:test";
 
-import { getDashboardSummary } from "../src/modules/dashboard/service";
+import { createDashboardCache } from "../src/modules/dashboard/cache";
+import { computeDashboardSummary } from "../src/modules/dashboard/service";
 import { createTestDb, type TestDb } from "./helpers/db";
 
 let db: TestDb;
@@ -59,7 +60,7 @@ async function insertPatient(input: {
   return { id: String(patient._id) };
 }
 
-describe("dashboard service — getDashboardSummary", () => {
+describe("dashboard service — computeDashboardSummary", () => {
   test("computes KPIs, monthly intake buckets, top doctors, and condition mix", async () => {
     const alice = await insertDoctor("Alice");
     const bob = await insertDoctor("Bob");
@@ -84,7 +85,7 @@ describe("dashboard service — getDashboardSummary", () => {
     });
 
     // Conditions: A1–A3 and B1 default to Asthma (4); U1 is Migraine (1).
-    const summary = await getDashboardSummary();
+    const summary = await computeDashboardSummary();
 
     expect(summary.kpis).toEqual({
       totalDoctors: 3,
@@ -118,7 +119,7 @@ describe("dashboard service — getDashboardSummary", () => {
   });
 
   test("handles an empty database with zeroed buckets and no breakdown", async () => {
-    const summary = await getDashboardSummary();
+    const summary = await computeDashboardSummary();
     expect(summary.kpis).toEqual({
       totalDoctors: 0,
       totalPatients: 0,
@@ -139,10 +140,62 @@ describe("dashboard service — getDashboardSummary", () => {
         await insertPatient({ name: `P${i}-${p}`, doctorId: doctor.id });
       }
     }
-    const { patientsPerDoctor } = await getDashboardSummary();
+    const { patientsPerDoctor } = await computeDashboardSummary();
     expect(patientsPerDoctor).toHaveLength(8);
     expect(patientsPerDoctor[0]?.count).toBe(10);
     expect(patientsPerDoctor[0]?.doctorName).toBe("Doctor 0");
     expect(patientsPerDoctor[7]?.count).toBe(3);
+  });
+});
+
+describe("dashboard cache — TTL + generation invalidation", () => {
+  function makeCounter(): { compute: () => Promise<{ calls: number }>; count: () => number } {
+    let calls = 0;
+    return {
+      compute: async () => {
+        calls += 1;
+        return { calls };
+      },
+      count: () => calls,
+    };
+  }
+
+  test("reuses the computed summary until the TTL expires", async () => {
+    const counter = makeCounter();
+    const cache = createDashboardCache(counter.compute, 50);
+
+    await cache.get();
+    await cache.get();
+    expect(counter.count()).toBe(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await cache.get();
+    expect(counter.count()).toBe(2);
+  });
+
+  test("invalidate forces a recompute before the TTL expires", async () => {
+    const counter = makeCounter();
+    const cache = createDashboardCache(counter.compute, 60_000);
+
+    await cache.get();
+    expect(counter.count()).toBe(1);
+
+    cache.invalidate();
+    await cache.get();
+    expect(counter.count()).toBe(2);
+  });
+
+  test("a cached generation survives unrelated invalidations' TTL window", async () => {
+    const counter = makeCounter();
+    const cache = createDashboardCache(counter.compute, 60_000);
+
+    await cache.get();
+    cache.invalidate();
+    cache.invalidate();
+    await cache.get();
+    // Two generation bumps still only need one recompute.
+    expect(counter.count()).toBe(2);
+    await cache.get();
+    expect(counter.count()).toBe(2);
   });
 });

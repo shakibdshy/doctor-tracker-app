@@ -6,27 +6,33 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "./button";
 
 export type ListPaginationProps = {
-  /** 1-based current page. */
+  /** 1-based position, tracked client-side across cursor pages (ADR-0003). */
   page: number;
-  totalPages: number;
-  total: number;
+  /** Record totals — only known from the listing's first page. */
+  total?: number;
+  totalPages?: number;
+  /** Whether a further page exists; caps Next regardless of `page`. */
+  hasMore: boolean;
   onPageChange: (page: number) => void;
   className?: string;
 };
 
 /**
- * Bound to the list-query page meta: prev/next controls, position, and
- * total count. Prev/next are native buttons — keyboard operable by default;
- * disabled at the bounds so the page never goes out of range.
+ * Bound to the keyset list meta: prev/next controls and position. Prev/next
+ * are native buttons — keyboard operable by default; disabled at the bounds
+ * so the page never goes out of range. "of N" renders only while the first
+ * page's totals are in hand.
  */
 function ListPagination({
   page,
-  totalPages,
   total,
+  totalPages,
+  hasMore,
   onPageChange,
   className,
 }: ListPaginationProps) {
-  const totalLabel = `${total} ${total === 1 ? "record" : "records"}`;
+  const totalLabel =
+    total !== undefined ? `${total} ${total === 1 ? "record" : "records"}` : "Records";
 
   return (
     <nav
@@ -42,7 +48,8 @@ function ListPagination({
       </p>
       <div className="flex items-center gap-2">
         <span className="text-muted-foreground text-[13px] tabular-nums">
-          Page {page} of {totalPages}
+          Page {page}
+          {totalPages !== undefined ? ` of ${totalPages}` : ""}
         </span>
         <div className="flex items-center gap-1">
           <Button
@@ -58,7 +65,7 @@ function ListPagination({
             variant="outline"
             size="icon-sm"
             onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages}
+            disabled={!hasMore}
             aria-label="Next page"
           >
             <ChevronRightIcon />

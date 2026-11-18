@@ -6,9 +6,12 @@ import type {
   DoctorUpdateInput,
 } from "@doctor-tracker-app/db/schemas/doctor";
 import { exclusiveTo } from "@doctor-tracker-app/db/schemas/shared";
+import { Types } from "mongoose";
 
+import { decodeCursor, encodeCursor } from "../../http/cursor";
 import { AppError } from "../../http/errors";
 import type { PageMeta } from "../../http/envelope";
+import { invalidateDashboardCache } from "../dashboard/cache";
 
 /** The fields the list tables render; ids become strings for the envelope. */
 const LIST_PROJECTION = "name specialization hospital phone email createdAt";
@@ -84,10 +87,13 @@ function toConflictIfDuplicate(error: unknown): never {
 /** The filter grammar listDoctors builds; plain shapes, no driver generics. */
 type DoctorFilter = {
   $and?: DoctorFilter[];
-  $or?: { nameLower?: RegExp; emailLower?: RegExp; hospitalLower?: RegExp }[];
+  /** Search prefixes, or the keyset continuation branches (ADR-0003). */
+  $or?:
+    | { nameLower?: RegExp; emailLower?: RegExp; hospitalLower?: RegExp }[]
+    | { createdAt?: Date | { $lt: Date }; _id?: Types.ObjectId }[];
   specialization?: string;
   hospitalLower?: RegExp;
-  createdAt?: { $gte?: Date; $lt?: Date };
+  createdAt?: Date | { $gte?: Date; $lt?: Date };
 };
 
 export async function listDoctors(
@@ -108,28 +114,50 @@ export async function listDoctors(
   const createdAtRange = exclusiveTo(query);
   if (Object.keys(createdAtRange).length > 0) conditions.push({ createdAt: createdAtRange });
 
+  // Keyset predicate (ADR-0003): strictly-after the cursor position in the
+  // (createdAt: -1, _id: -1) order — index-backed, no skip cost at depth.
+  const cursor = query.cursor ? decodeCursor(query.cursor) : null;
+  if (cursor) {
+    const cursorId = new Types.ObjectId(cursor.id);
+    conditions.push({
+      $or: [
+        { createdAt: { $lt: cursor.createdAt } },
+        { createdAt: cursor.createdAt, _id: { $lt: cursorId } },
+      ] as DoctorFilter["$or"],
+    });
+  }
+
   const filter: DoctorFilter =
     conditions.length > 1 ? { $and: conditions } : (conditions[0] ?? {});
 
+  // limit+1 peek detects hasMore without a second query; the count runs only
+  // on the first page — the one place the pager shows record totals.
   // The filter grammar is built above; the single cast adapts it to the
   // driver's mapped filter generics.
   const [docs, total] = await Promise.all([
     Doctor.find(filter as never)
-      .sort({ createdAt: -1 })
-      .skip((query.page - 1) * query.limit)
-      .limit(query.limit)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(query.limit + 1)
       .select(LIST_PROJECTION)
       .lean(),
-    Doctor.countDocuments(filter as never),
+    cursor ? Promise.resolve(null) : Doctor.countDocuments(filter as never),
   ]);
 
+  const hasMore = docs.length > query.limit;
+  const page = docs.slice(0, query.limit);
+  const last = page.at(-1);
+
   return {
-    data: docs.map((doc) => toItem(doc as DoctorRecord)),
+    data: page.map((doc) => toItem(doc as DoctorRecord)),
     meta: {
-      page: query.page,
       limit: query.limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / query.limit)),
+      hasMore,
+      // A cursor only exists if there is a next page to feed it to.
+      nextCursor: hasMore && last ? encodeCursor(last.createdAt, last._id.toString()) : null,
+      ...(total !== null && {
+        total,
+        totalPages: Math.max(1, Math.ceil(total / query.limit)),
+      }),
     },
   };
 }
@@ -143,6 +171,7 @@ export async function getDoctor(id: string): Promise<DoctorDetail> {
 export async function createDoctor(input: DoctorCreateInput): Promise<DoctorDetail> {
   try {
     const doctor = await Doctor.create({ ...input, ...shadowFields(input) });
+    invalidateDashboardCache();
     return toItem(doctor.toObject() as DoctorRecord);
   } catch (error) {
     toConflictIfDuplicate(error);
@@ -168,6 +197,7 @@ export async function updateDoctor(
   } catch (error) {
     toConflictIfDuplicate(error);
   }
+  invalidateDashboardCache();
   return toItem(doctor.toObject() as DoctorRecord);
 }
 
@@ -185,5 +215,6 @@ export async function deleteDoctor(id: string): Promise<{ id: string }> {
 
   await Patient.updateMany({ doctor: doctor._id }, { $set: { doctor: null } });
   await Doctor.deleteOne({ _id: doctor._id });
+  invalidateDashboardCache();
   return { id: doctor._id.toString() };
 }

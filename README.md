@@ -110,9 +110,9 @@ packages/
 { "success": false, "error": { "code": "CONFLICT", "message": "…" } }
 ```
 
-**Data model.** `patients` reference a `doctor` (optional — `null` means *unassigned*). Deleting a doctor unassigns their patients first; the records survive. Deleting a patient is permanent and Admin-only. Both collections carry `timestamps` and compound indexes ordered equality → sort → range, and all list filtering / pagination happens in MongoDB (never in JS).
+**Data model.** `patients` reference a `doctor` (optional — `null` means *unassigned*). Deleting a doctor unassigns their patients first; the records survive. Deleting a patient is permanent and Admin-only. Both collections carry `timestamps` and compound indexes ordered equality → sort → range, each suffixed `_id: -1` so the keyset sort is fully index-covered, and all list filtering / pagination happens in MongoDB (never in JS).
 
-**Client state.** TanStack Query owns server state (`keepPreviousData` for flicker-free pagination, optimistic unassign with rollback + toast). Filters, search and page live in the URL, so views are refreshable and shareable. Forms are React Hook Form + Zod using the *same* schemas the server validates with — client and server validation can never drift.
+**Client state.** TanStack Query owns server state (`keepPreviousData` for flicker-free pagination, optimistic unassign with rollback + toast). Filters, page position and the pagination cursor live in the URL, so views are refreshable and shareable. Forms are React Hook Form + Zod using the *same* schemas the server validates with — client and server validation can never drift.
 
 ### API surface (all under `/api/v1`, session required)
 
@@ -130,7 +130,7 @@ packages/
 | PATCH  | `/patients/:id`   | `patient:update` (assignment-only patches also accept `patient:assign`) |
 | DELETE | `/patients/:id`   | `patient:delete`  |
 
-List endpoints accept `search`, `page`, `limit` (capped at 100), `from`/`to` dates, plus `specialization`/`hospital` (doctors) and `condition`/`doctor` (patients, `doctor=unassigned` supported). Auth endpoints (`/api/auth/*`) are handled by better-auth with sign-in rate limiting.
+List endpoints paginate by keyset cursor (ADR-0003): `cursor` resumes a listing, `limit` is capped at 100, and the response `meta` carries `hasMore` + `nextCursor`; `total`/`totalPages` ride only a listing's first page. They also accept `search` and `from`/`to` dates, plus `specialization`/`hospital` (doctors) and `condition`/`doctor` (patients, `doctor=unassigned` supported). Auth endpoints (`/api/auth/*`) are handled by better-auth with sign-in rate limiting.
 
 ---
 
@@ -149,6 +149,14 @@ List endpoints accept `search`, `page`, `limit` (capped at 100), `from`/`to` dat
 **Problem.** The assessment mandates a *separate* client and API server. The naive wiring — browser fetches `http://api-host` directly with `credentials: "include"` — makes the session cookie third-party. Safari blocks third-party cookies outright, Chrome is phasing them out, and incognito windows (the reviewer's test environment) break login. CORS with credentials also widens the attack surface.
 
 **Decision.** The browser talks only to the Next.js origin; `next.config.ts` rewrites `/api/auth/:path*` and `/api/v1/:path*` to the Express server. Cookies are set on the web origin, so they are first-party, `SameSite=Lax`, and work in incognito and strict browsers with no CORS preflights for browser traffic. The Next.js server-side session guard forwards the incoming cookies to Express to validate sessions before rendering protected pages (fail-closed). The cost is one extra hop and a rewrite rule to keep in sync — cheap compared to debugging third-party cookie failures in a reviewer's browser. Express still sends CORS headers for non-browser API consumers. Details in [ADR-0002](docs/adr/0002-first-party-api-cookies-via-nextjs-rewrites.md).
+
+---
+
+### 3. Keyset pagination, dashboard caching, and connection pool sizing
+
+**Problem.** The spec requires the data layer to be optimized. Three hot spots: offset pagination gets slower linearly with depth (`skip(5000)` reads and discards 5,000 rows per request) and paid for a `count` on every page; the dashboard recomputed 7 aggregation pipelines on every visit; the Mongo connection pool ran on driver defaults regardless of the deployment target.
+
+**Decision.** List endpoints paginate by **keyset cursor** — an opaque base64url token of the last row's `(createdAt, _id)` position — so page *N* reads exactly `limit + 1` rows at any depth, and the count runs only on the first page of a listing (the one place the pager shows totals). Every compound list index ends in `createdAt: -1, _id: -1` so the sort is fully index-covered. The **dashboard summary is cached in process memory** (60s TTL) with a generation counter that every patient/doctor mutation bumps, so own writes reflect immediately; on serverless each warm instance holds its own copy and the TTL bounds cross-instance staleness. **Pool sizing is env-configurable** (`DB_MAX_POOL_SIZE`, `DB_MIN_POOL_SIZE`, `DB_MAX_IDLE_TIME_MS`, `DB_SERVER_SELECTION_TIMEOUT_MS`) with driver-safe defaults, so a long-running host can run a larger warm pool while many serverless instances each keep a small pool inside the Atlas connection budget. The keyset change is a breaking API contract change (strict parsing now rejects the legacy `page` param). Details in [ADR-0003](docs/adr/0003-keyset-cursor-pagination.md).
 
 ---
 
@@ -186,6 +194,9 @@ cp apps/web/.env.example apps/web/.env
 | `CORS_ORIGIN`        | `http://localhost:3001`                    | Web origin                         |
 | `DATABASE_URL`       | `mongodb://127.0.0.1:27017/doctor-tracker` | Local or Atlas URI                 |
 | `PORT`               | `3000`                                     | Optional, defaults to 3000         |
+| `DB_MAX_POOL_SIZE`    | `10`                                       | Optional pool knobs (see decision 3) |
+| `DB_MIN_POOL_SIZE`    | `0`                                        | 〃                                  |
+| `DB_MAX_IDLE_TIME_MS` | `30000`                                    | 〃                                  |
 
 `apps/web/.env`:
 
@@ -224,7 +235,7 @@ bun run check-types  # strict TypeScript across all packages
 
 ## Testing & verification
 
-- **35 automated tests** (`bun test`): doctor / patient / dashboard services against `mongodb-memory-server` (search, filters, pagination caps, date bounds, unassign-on-delete, duplicate email → 409, aggregation shape, `IXSCAN` assertions) and the role-policy matrix.
+- **40 automated tests** (`bun test`): doctor / patient / dashboard services against `mongodb-memory-server` (search, filters, keyset pagination — cursor walks, id tie-breaks, filter composition, malformed cursors — date bounds, unassign-on-delete, duplicate email → 409, aggregation shape, cache TTL/invalidation, `IXSCAN` assertions) and the role-policy matrix.
 - **End-to-end browser pass** (Playwright, fresh incognito-equivalent contexts): route guards, both role logins, every filter + URL persistence, pagination, create / edit / delete / unassign with confirm dialogs and optimistic updates, team create / ban / unban, staff 403s at API *and* UI level, dashboard charts, and mobile card layouts at 390px — in light and dark themes, with zero console errors and zero horizontal overflow.
 
 ---

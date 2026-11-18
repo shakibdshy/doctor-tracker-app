@@ -3,9 +3,14 @@ import { z } from "zod";
 /** Mongo ObjectId string, lowercased hex. */
 export const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid id");
 
-/** Shared list-query grammar: positive integers, server-capped page size. */
+/**
+ * Shared list-query grammar: server-capped page size + opaque keyset cursor.
+ * An absent `cursor` selects the first page (the only page that pays for a
+ * count — ADR-0003); any other page resumes from the previous response's
+ * `nextCursor`. The string is opaque to clients: the server decodes and
+ * validates it, so garbage fails as a 400, never a wrong page.
+ */
 export const paginationSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
   limit: z.coerce
     .number()
     .int()
@@ -13,6 +18,7 @@ export const paginationSchema = z.object({
     .default(20)
     // The server caps page size at 100 regardless of client input.
     .transform((limit) => Math.min(limit, 100)),
+  cursor: z.string().max(512).optional(),
 });
 
 /** Inclusive day-level created-at range: `to` becomes an exclusive upper bound. */

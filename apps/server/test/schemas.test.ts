@@ -13,18 +13,20 @@ describe("doctor list query schema", () => {
     expect(huge.limit).toBe(100);
   });
 
-  test("applies positive-integer defaults and coerces strings", () => {
+  test("applies defaults and coerces strings", () => {
     const parsed = doctorListQuerySchema.parse({});
-    expect(parsed.page).toBe(1);
     expect(parsed.limit).toBe(20);
+    expect(parsed.cursor).toBeUndefined();
 
-    const coerced = doctorListQuerySchema.parse({ page: "3", limit: "25" });
-    expect(coerced.page).toBe(3);
+    const coerced = doctorListQuerySchema.parse({ cursor: "abc_cursor", limit: "25" });
+    expect(coerced.cursor).toBe("abc_cursor");
     expect(coerced.limit).toBe(25);
   });
 
   test("rejects non-positive integers and unknown operator keys", () => {
-    expect(() => doctorListQuerySchema.parse({ page: "0" })).toThrow();
+    // The legacy offset grammar is gone: `page` is no longer part of the
+    // list-query contract (ADR-0003), and strict parsing rejects it.
+    expect(() => doctorListQuerySchema.parse({ page: "3" })).toThrow();
     expect(() => doctorListQuerySchema.parse({ limit: "-5" })).toThrow();
     expect(() => doctorListQuerySchema.parse({ limit: "1.5" })).toThrow();
     // Operator-injection payloads are rejected by the strict shape, never

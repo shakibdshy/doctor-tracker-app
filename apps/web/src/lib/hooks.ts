@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiErrorMessage, apiFetch, type Patient } from "@/lib/api";
+import { apiErrorMessage, apiFetch, type PageMeta, type Patient } from "@/lib/api";
 
 /** Debounce a fast-changing value (e.g. the search input) by `delayMs`. */
 export function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -59,7 +59,7 @@ export function useUrlState() {
   return { params: searchParams, setParams };
 }
 
-type PatientPage = { data: Patient[]; meta?: { total: number } };
+type PatientPage = { data: Patient[]; meta?: PageMeta };
 
 /**
  * Optimistic unassign (spec: confirmation, optimistic with rollback). The
@@ -88,7 +88,13 @@ export function useOptimisticUnassign(
           return {
             ...old,
             data: old.data.filter((row) => row.id !== patient.id),
-            meta: old.meta ? { ...old.meta, total: old.meta.total - 1 } : old.meta,
+            meta: old.meta
+              ? {
+                  ...old.meta,
+                  total:
+                    old.meta.total !== undefined ? old.meta.total - 1 : undefined,
+                }
+              : old.meta,
           };
         }
         return {

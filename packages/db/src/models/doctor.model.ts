@@ -24,11 +24,14 @@ const doctorSchema = new Schema(
   { collection: "doctors", timestamps: true },
 );
 
-doctorSchema.index({ specialization: 1, createdAt: -1 });
-doctorSchema.index({ hospitalLower: 1, createdAt: -1 });
-doctorSchema.index({ nameLower: 1, createdAt: -1 });
-doctorSchema.index({ emailLower: 1, createdAt: -1 });
-doctorSchema.index({ createdAt: -1 });
+// Every list query sorts newest-first with an _id tie-break (ADR-0003), so
+// each compound index ends in createdAt: -1, _id: -1 to fully cover the sort
+// — equality → sort → range (ESR).
+doctorSchema.index({ specialization: 1, createdAt: -1, _id: -1 });
+doctorSchema.index({ hospitalLower: 1, createdAt: -1, _id: -1 });
+doctorSchema.index({ nameLower: 1, createdAt: -1, _id: -1 });
+doctorSchema.index({ emailLower: 1, createdAt: -1, _id: -1 });
+doctorSchema.index({ createdAt: -1, _id: -1 });
 // Duplicate protection at the storage level: one doctor per normalized email.
 doctorSchema.index({ emailLower: 1 }, { unique: true });
 

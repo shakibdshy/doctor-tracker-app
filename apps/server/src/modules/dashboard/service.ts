@@ -38,11 +38,12 @@ function bucketLabel(date: Date): string {
 }
 
 /**
- * Dashboard summary: every number is computed database-side by parallel
- * aggregation pipelines (spec, Data model & queries); Promise.all runs them
- * concurrently.
+ * Dashboard summary, uncached: every number is computed database-side by
+ * parallel aggregation pipelines (spec, Data model & queries); Promise.all
+ * runs them concurrently. `cache.ts` wraps this with the TTL + generation
+ * cache; tests call it directly for fresh reads.
  */
-export async function getDashboardSummary(): Promise<DashboardSummary> {
+export async function computeDashboardSummary(): Promise<DashboardSummary> {
   const now = new Date();
   const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const from = intakeFrom();

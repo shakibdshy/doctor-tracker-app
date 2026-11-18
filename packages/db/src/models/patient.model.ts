@@ -25,11 +25,14 @@ const patientSchema = new Schema(
   { collection: "patients", timestamps: true },
 );
 
-patientSchema.index({ doctor: 1, createdAt: -1 });
-patientSchema.index({ condition: 1, createdAt: -1 });
-patientSchema.index({ nameLower: 1, createdAt: -1 });
-patientSchema.index({ phoneLower: 1, createdAt: -1 });
-patientSchema.index({ createdAt: -1 });
+// Every list query sorts newest-first with an _id tie-break (ADR-0003), so
+// each compound index ends in createdAt: -1, _id: -1 to fully cover the sort
+// — equality → sort → range (ESR).
+patientSchema.index({ doctor: 1, createdAt: -1, _id: -1 });
+patientSchema.index({ condition: 1, createdAt: -1, _id: -1 });
+patientSchema.index({ nameLower: 1, createdAt: -1, _id: -1 });
+patientSchema.index({ phoneLower: 1, createdAt: -1, _id: -1 });
+patientSchema.index({ createdAt: -1, _id: -1 });
 
 const Patient = model<PatientDocument>("Patient", patientSchema);
 

@@ -22,12 +22,18 @@ export type Patient = {
   notes?: string;
 };
 
-/** Pagination metadata from the API envelope (mirrors the server shape). */
+/**
+ * Pagination metadata from the API envelope (ADR-0003 keyset, mirrors the
+ * server shape): `nextCursor` feeds the next page request and `hasMore` ends
+ * the walk. `total`/`totalPages` ride only the first page of a listing —
+ * cursor pages skip the count query, so totals stay last-known while paging.
+ */
 export type PageMeta = {
-  page: number;
   limit: number;
-  total: number;
-  totalPages: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+  total?: number;
+  totalPages?: number;
 };
 
 /** Error raised by any non-success API envelope. */

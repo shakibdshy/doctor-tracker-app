@@ -5,18 +5,15 @@ import { cn } from "@doctor-tracker-app/ui/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@doctor-tracker-app/ui/components/dropdown-menu";
-import { ChevronsUpDownIcon, LogOutIcon, StethoscopeIcon } from "lucide-react";
+import { ChevronsUpDownIcon, StethoscopeIcon } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
 
+import { AccountMenuItems } from "./account-menu";
 import { ModeToggle } from "./mode-toggle";
 import { initialsOf, NAV } from "./nav-items";
 
@@ -27,7 +24,6 @@ import { initialsOf, NAV } from "./nav-items";
  */
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = authClient.useSession();
 
   const links = NAV.filter((item) => can(session?.user.role, item.capability));
@@ -99,31 +95,7 @@ export function Sidebar() {
               <ChevronsUpDownIcon aria-hidden className="text-sidebar-foreground/50 size-3.5 shrink-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="top" className="min-w-52">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>My account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
-                <DropdownMenuItem className="text-muted-foreground capitalize">
-                  {session.user.role}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    authClient.signOut({
-                      fetchOptions: {
-                        onSuccess: () => {
-                          router.push("/login");
-                          router.refresh();
-                        },
-                      },
-                    });
-                  }}
-                >
-                  <LogOutIcon aria-hidden />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+              <AccountMenuItems email={session.user.email} role={session.user.role} />
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (

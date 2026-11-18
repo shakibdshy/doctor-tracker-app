@@ -10,7 +10,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white)
 ![Bun](https://img.shields.io/badge/Bun-Turborepo-000000?logo=bun&logoColor=white)
 ![better-auth](https://img.shields.io/badge/better--auth-RBAC-6D28D9)
-![Tests](https://img.shields.io/badge/tests-35_passing-22C55E)
+![Tests](https://img.shields.io/badge/tests-40_passing-22C55E)
 
 **Live demo: [https://doc-tracker-web-one.vercel.app](https://doc-tracker-web-one.vercel.app/)**
 
@@ -36,9 +36,9 @@ Open the [live demo](https://doc-tracker-web-one.vercel.app/) and sign in with e
 ## Highlights
 
 - **Live dashboard** — KPI stat cards plus three meaningful charts (12-month patient intake area chart, patients-per-doctor bar chart, condition-mix donut), all computed by MongoDB aggregation, not in JS.
-- **Doctor roster** — indexed search-as-you-type, specialization / hospital filters, date-range filtering, pagination, and full create / edit / delete with confirm dialogs.
-- **Doctor detail** — per-doctor assigned-patient list with one-click unassign and "add patient under this doctor" (assignment pre-locked).
-- **Patients** — search, condition / doctor filters (including an *unassigned* pool), date range, pagination; assign / reassign / unassign; optimistic updates with rollback + toast.
+- **Doctor roster** — indexed search-as-you-type over name / email / hospital, specialization / hospital filters, date-range filtering, pagination, and full create / edit / delete with confirm dialogs.
+- **Doctor detail** — per-doctor assigned-patient list with one-click unassign and "add patient under this doctor" (assignment pre-locked). Removing a patient from a doctor only *unassigns* them — the record survives in the unassigned pool; permanent deletion is Admin-only, from the Patients page.
+- **Patients** — name / phone search, condition / doctor filters (including an *unassigned* pool), date range, pagination; assign / reassign / unassign; optimistic updates with rollback + toast.
 - **Team & roles** — Admin-provisioned users, role assignment, ban / unban, backed by the better-auth admin plugin and a pure, unit-tested capability policy.
 - **Craft** — a distinctive editorial design system (Fraunces display + Schibsted Grotesk body, warm bone / evergreen tokens), full light **and** dark themes, custom date-picker, skeleton loaders, empty / error states with retry, URL-persisted filters, and keyboard-accessible dialogs, selects and tables.
 - **Fully responsive** — data tables on desktop collapse to action-rich cards on mobile; every surface verified at 390 / 768 / 1024 / 1440px in both themes with zero horizontal overflow.
@@ -108,7 +108,8 @@ packages/
 **Request lifecycle.** The browser only ever talks to the Next.js origin. Next.js rewrites `/api/auth/*` and `/api/v1/*` to Express, so session cookies stay first-party (see [decision 2](#2-first-party-cookies-via-nextjs-rewrites-instead-of-cross-origin-cors)). On the server, every `/api/v1` request passes `requireAuth` (401 without a session) then a per-route `requireCapability` check (403 when the role lacks the capability). Routes stay thin: they wire middleware to controllers; controllers parse input with shared Zod schemas and call services; services own all MongoDB access. One central error middleware maps `AppError`, Zod failures and duplicate-key errors to a uniform envelope — no per-controller try/catch, no stack traces to clients:
 
 ```json
-{ "success": true,  "data": [...], "meta": { "total": 900, "page": 1, "limit": 10 } }
+{ "success": true,  "data": [...], "meta": { "limit": 10, "hasMore": true, "nextCursor": "eyJjIjoiMjAyNi0wMS0xNVQxMjowMDowMC4wMDBaIiwiaSI6IjY4YTFlMmYzYTRiNWM2ZDdlOGY5MDEyMyJ9", "total": 900, "totalPages": 90 } } // first page — the only one that pays for a count
+{ "success": true,  "data": [...], "meta": { "limit": 10, "hasMore": false, "nextCursor": null } } // later pages — cursor walk only, totals are not recomputed
 { "success": false, "error": { "code": "CONFLICT", "message": "…" } }
 ```
 

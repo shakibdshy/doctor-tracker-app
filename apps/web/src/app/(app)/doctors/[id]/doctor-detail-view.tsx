@@ -14,12 +14,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiFetch, apiErrorMessage, type Doctor, type Patient } from "@/lib/api";
-import { useOptimisticUnassign } from "@/lib/hooks";
+import { apiFetch, apiErrorMessage, type Doctor } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
-
-import { PatientCard } from "../../patients/patient-card";
-import { PatientFormDialog } from "../../patients/patient-form-dialog";
+import { listPatients, type Patient } from "@/features/patients/api";
+import { patientKeys, useOptimisticUnassign } from "@/features/patients/queries";
+import { PatientCard } from "@/features/patients/components/patient-card";
+import { PatientFormDialog } from "@/features/patients/components/patient-form-dialog";
 
 const DETAIL_PAGE_SIZE = 5;
 
@@ -58,11 +58,8 @@ export default function DoctorDetailView({
   });
 
   const patientsQuery = useQuery({
-    queryKey: ["patients", { doctor: doctorId, page, cursor }],
-    queryFn: () =>
-      apiFetch<Patient[]>(
-        `/api/v1/patients?doctor=${doctorId}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}&limit=${DETAIL_PAGE_SIZE}`,
-      ),
+    queryKey: patientKeys.list({ doctor: doctorId, page, cursor }),
+    queryFn: () => listPatients({ doctor: doctorId, cursor, limit: DETAIL_PAGE_SIZE }),
     placeholderData: keepPreviousData,
   });
 
@@ -80,13 +77,11 @@ export default function DoctorDetailView({
     if (meta?.nextCursor) cursorsRef.current.set(page + 1, meta.nextCursor);
   }, [page, cursor, meta]);
 
-  const patientsListKey = ["patients", { doctor: doctorId, page, cursor }] as const;
-
   // Unassign from this doctor's list is optimistic, same contract as the
   // patients page — the record joins the unassigned pool.
   // This list is the doctor's assignment, so unassignment removes the row.
   const unassignMutation = useOptimisticUnassign(
-    ["patients", { doctor: doctorId, page, cursor }],
+    patientKeys.list({ doctor: doctorId, page, cursor }),
     "removeRow",
   );
 

@@ -7,8 +7,10 @@ import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog"
 import { PencilIcon, Trash2Icon, UnlinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { apiErrorMessage, type Patient } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
+
+import type { Patient } from "../api";
 
 export type PatientCardProps = {
   patient: Patient;

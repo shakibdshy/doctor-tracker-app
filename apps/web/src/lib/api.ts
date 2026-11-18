@@ -9,19 +9,6 @@ export type Doctor = {
   createdAt: string;
 };
 
-/** A patient record as the envelope returns it (doctor resolved to name). */
-export type Patient = {
-  id: string;
-  name: string;
-  phone: string;
-  gender: string;
-  dateOfBirth: string;
-  condition: string;
-  doctor: { id: string; name: string } | null;
-  createdAt: string;
-  notes?: string;
-};
-
 /**
  * Pagination metadata from the API envelope (ADR-0003 keyset, mirrors the
  * server shape): `nextCursor` feeds the next page request and `hasMore` ends

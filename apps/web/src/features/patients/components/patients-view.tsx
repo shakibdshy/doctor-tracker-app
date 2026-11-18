@@ -3,7 +3,6 @@
 import { can } from "@doctor-tracker-app/auth/policy";
 import { Badge } from "@doctor-tracker-app/ui/components/badge";
 import { Button } from "@doctor-tracker-app/ui/components/button";
-import { Card } from "@doctor-tracker-app/ui/components/card";
 import { ConfirmDialog } from "@doctor-tracker-app/ui/components/confirm-dialog";
 import { DataTable } from "@doctor-tracker-app/ui/components/data-table";
 import type { DataTableColumn } from "@doctor-tracker-app/ui/components/data-table";
@@ -19,26 +18,31 @@ import {
   SelectValue,
 } from "@doctor-tracker-app/ui/components/select";
 import { CONDITIONS } from "@doctor-tracker-app/db/schemas/enums";
-import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { PencilIcon, PlusIcon, Trash2Icon, UnlinkIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiFetch, apiErrorMessage, type Doctor, type PageMeta, type Patient } from "@/lib/api";
-import { useDebouncedValue, useOptimisticUnassign, useUrlState } from "@/lib/hooks";
+import { apiErrorMessage, apiFetch, type Doctor, type PageMeta } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { useUrlState } from "@/lib/use-url-state";
 
+import type { Patient } from "../api";
+import {
+  patientKeys,
+  useDeletePatient,
+  useOptimisticUnassign,
+  usePatients,
+} from "../queries";
 import { PatientCard } from "./patient-card";
 import { PatientFormDialog } from "./patient-form-dialog";
-
-const PATIENT_PAGE_SIZE = 10;
 
 const ANY_DOCTOR = "any";
 const UNASSIGNED = "unassigned";
 
 export default function PatientsView({ role }: { role: string | null | undefined }) {
   const { params, setParams } = useUrlState();
-  const queryClient = useQueryClient();
 
   const canCreate = can(role, "patient:create");
   const canUpdate = can(role, "patient:update");
@@ -85,18 +89,6 @@ export default function PatientsView({ role }: { role: string | null | undefined
     [params, page, cursor],
   );
 
-  const queryString = useMemo(() => {
-    const search = new URLSearchParams();
-    if (query.search) search.set("search", query.search);
-    if (query.condition) search.set("condition", query.condition);
-    if (query.doctor) search.set("doctor", query.doctor);
-    if (query.from) search.set("from", query.from);
-    if (query.to) search.set("to", query.to);
-    if (query.cursor) search.set("cursor", query.cursor);
-    search.set("limit", String(PATIENT_PAGE_SIZE));
-    return search.toString();
-  }, [query]);
-
   // Doctor filter options: the roster is small enough for one capped page.
   const { data: doctorOptions } = useQuery({
     queryKey: ["doctors", "options"],
@@ -104,11 +96,7 @@ export default function PatientsView({ role }: { role: string | null | undefined
   });
   const doctors = doctorOptions?.data ?? [];
 
-  const { data, isLoading, error, refetch, isPlaceholderData } = useQuery({
-    queryKey: ["patients", query],
-    queryFn: () => apiFetch<Patient[]>(`/api/v1/patients?${queryString}`, { method: "GET" }),
-    placeholderData: keepPreviousData,
-  });
+  const { data, isLoading, error, refetch, isPlaceholderData } = usePatients(query);
 
   // Totals ride only the first page (cursor pages skip the count); keep the
   // last known values so the header and pager don't flicker while paging.
@@ -149,19 +137,9 @@ export default function PatientsView({ role }: { role: string | null | undefined
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
 
-  const deleteMutation = useMutation({
-    mutationFn: (patient: Patient) =>
-      apiFetch<{ id: string }>(`/api/v1/patients/${patient.id}`, { method: "DELETE" }),
-    onSuccess: (_result, patient) => {
-      toast.success(`${patient.name} deleted permanently`);
-      void queryClient.invalidateQueries({ queryKey: ["patients"] });
-    },
-    onError: (deleteError) => {
-      toast.error(apiErrorMessage(deleteError));
-    },
-  });
+  const deleteMutation = useDeletePatient();
 
-  const unassignMutation = useOptimisticUnassign(["patients", query], "keepRow");
+  const unassignMutation = useOptimisticUnassign(patientKeys.list(query), "keepRow");
 
   const columns = useMemo<DataTableColumn<Patient>[]>(
     () => [

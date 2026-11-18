@@ -26,7 +26,8 @@ import { toast } from "sonner";
 
 import { apiFetch, apiErrorMessage, type Doctor, type PageMeta } from "@/lib/api";
 import Link from "next/link";
-import { useDebouncedValue, useUrlState } from "@/lib/hooks";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { useUrlState } from "@/lib/use-url-state";
 
 import { DoctorFormDialog } from "./doctor-form-dialog";
 

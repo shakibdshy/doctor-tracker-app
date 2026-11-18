@@ -27,13 +27,16 @@ import {
   patientCreateSchema,
   type PatientCreateInput,
 } from "@doctor-tracker-app/db/schemas/patient";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { z } from "zod";
 import { toast } from "sonner";
 
-import { apiFetch, type Doctor, type Patient } from "@/lib/api";
+import type { Doctor } from "@/lib/api";
+
+import { createPatient, updatePatient, type Patient } from "../api";
+import { patientKeys, usePatient } from "../queries";
 
 const NO_DOCTOR = "none";
 
@@ -98,9 +101,7 @@ export function PatientFormDialog({
 
   // List rows omit notes (list projections render table fields only), so
   // editing fetches the full record — otherwise saving would wipe notes.
-  const detailQuery = useQuery({
-    queryKey: ["patient", initial?.id],
-    queryFn: () => apiFetch<Patient>(`/api/v1/patients/${initial?.id}`),
+  const detailQuery = usePatient(initial?.id, {
     enabled: open && Boolean(initial),
   });
   const full = initial
@@ -149,14 +150,10 @@ export function PatientFormDialog({
         // A locked dialog always assigns to its doctor.
         doctorId: lockedDoctor ? lockedDoctor.id : (values.doctorId ?? null),
       };
-      const path = initial ? `/api/v1/patients/${initial.id}` : "/api/v1/patients";
-      return apiFetch<Patient>(path, {
-        method: initial ? "PATCH" : "POST",
-        body: JSON.stringify(payload),
-      });
+      return initial ? updatePatient(initial.id, payload) : createPatient(payload);
     },
     onSuccess: (_result, _values, _context) => {
-      void queryClient.invalidateQueries({ queryKey: ["patients"] });
+      void queryClient.invalidateQueries({ queryKey: patientKeys.all });
       toast.success(editing ? "Patient updated" : "Patient created");
       onOpenChange(false);
     },

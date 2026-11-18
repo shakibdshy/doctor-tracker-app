@@ -93,7 +93,11 @@ Turborepo monorepo: two apps, four shared packages.
 
 ```
 apps/
-  web/       Next.js App Router client (Vercel-ready)
+  web/       Next.js App Router client (Vercel-ready) — organized by feature:
+             app/ holds only thin route files; features/<domain>/ owns
+             api.ts (typed fetchers), queries.ts (query-key factory +
+             hooks) and components/; lib/ keeps cross-feature client code
+             (fetch wrapper, envelope errors, URL state, session)
   server/    Express REST API (standalone Node/Bun process)
 packages/
   auth/      better-auth config (admin plugin, rate limits) + pure role policy

@@ -20,102 +20,51 @@ import {
 import { SPECIALIZATIONS } from "@doctor-tracker-app/db/schemas/enums";
 import Link from "next/link";
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { apiErrorMessage, type PageMeta } from "@/lib/api";
+import { apiErrorMessage } from "@/lib/api";
 import { dateFormatter } from "@/lib/format";
-import { useDebouncedValue } from "@/lib/use-debounced-value";
-import { useUrlState } from "@/lib/use-url-state";
+import { useKeysetList } from "@/lib/use-keyset-list";
 
-import type { Doctor } from "../api";
+import type { Doctor, DoctorListQuery } from "../api";
 import { useDeleteDoctor, useDoctors } from "../queries";
 import { DoctorCard } from "./doctor-card";
 import { DoctorFormDialog } from "./doctor-form-dialog";
 
+/** URL filter keys this listing owns (search is the hook's own field). */
+type DoctorFilters = Omit<DoctorListQuery, "page" | "cursor" | "search" | "limit">;
+const DOCTOR_FILTER_FIELDS = [
+  "specialization",
+  "hospital",
+  "from",
+  "to",
+] as const satisfies readonly (keyof DoctorFilters)[];
+
 export default function DoctorsView({ role }: { role: string | null | undefined }) {
-  const { params, setParams } = useUrlState();
+  // URL state, debounced search, cursor stack, totals: lib/use-keyset-list.
+  const {
+    params,
+    setParams,
+    query,
+    page,
+    knownTotals,
+    syncPage,
+    gotoPage,
+    searchInput,
+    setSearchInput,
+    activeFilters,
+  } = useKeysetList<DoctorFilters>({ fields: DOCTOR_FILTER_FIELDS });
 
   const canCreate = can(role, "doctor:create");
   const canUpdate = can(role, "doctor:update");
   const canDelete = can(role, "doctor:delete");
 
-  // The search input is local and debounced; every other filter lives in the URL.
-  const urlSearch = params.get("search") ?? "";
-  const [searchInput, setSearchInput] = useState(urlSearch);
-  const debouncedSearch = useDebouncedValue(searchInput, 300);
-  useEffect(() => {
-    if (debouncedSearch !== urlSearch) {
-      setParams({ search: debouncedSearch || null, page: null, cursor: null });
-    }
-  }, [debouncedSearch, urlSearch, setParams]);
-  // External URL changes (Clear filters, back button) mirror into the input,
-  // but never clobber in-progress typing that hasn't committed yet.
-  useEffect(() => {
-    if (urlSearch !== searchInput && urlSearch !== debouncedSearch) {
-      setSearchInput(urlSearch);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlSearch]);
-
-  // Keyset pagination (ADR-0003): `cursor` drives the API request, `page` is
-  // the 1-based position the pager displays. Each visited page's cursor is
-  // remembered in a stack for Previous to walk back; the stack clears when a
-  // filter changes because cursors are only valid within one filter context.
-  const pageParam = Number(params.get("page") ?? 1);
-  const page = Number.isFinite(pageParam) && pageParam >= 1 ? Math.floor(pageParam) : 1;
-  const cursor = params.get("cursor") ?? undefined;
-
-  const query = useMemo(
-    () => ({
-      page,
-      cursor,
-      search: params.get("search") ?? undefined,
-      specialization: params.get("specialization") ?? undefined,
-      hospital: params.get("hospital") ?? undefined,
-      from: params.get("from") ?? undefined,
-      to: params.get("to") ?? undefined,
-    }),
-    [params, page, cursor],
-  );
-
   const { data, isLoading, error, refetch, isPlaceholderData } = useDoctors(query);
-
-  // Totals ride only the first page (cursor pages skip the count); keep the
-  // last known values so the header and pager don't flicker while paging.
-  const [knownTotals, setKnownTotals] = useState<{ total: number; totalPages: number } | null>(
-    null,
-  );
-
-  const cursorsRef = useRef(new Map<number, string | null>());
-
-  const meta: PageMeta | undefined = !isPlaceholderData ? data?.meta : undefined;
+  const meta = !isPlaceholderData ? data?.meta : undefined;
   useEffect(() => {
-    if (meta?.total !== undefined) {
-      setKnownTotals({ total: meta.total, totalPages: meta.totalPages ?? 1 });
-    }
-  }, [meta]);
-
-  // Record each visited page's own cursor plus the forward cursor its
-  // response hands out, so Previous/Next always fetch the page they show.
-  useEffect(() => {
-    cursorsRef.current.set(page, cursor ?? null);
-    if (meta?.nextCursor) cursorsRef.current.set(page + 1, meta.nextCursor);
-  }, [page, cursor, meta]);
-  // A new filter context invalidates every stored cursor.
-  const filterKey = [
-    query.search,
-    query.specialization,
-    query.hospital,
-    query.from,
-    query.to,
-  ].join("|");
-  useEffect(() => {
-    cursorsRef.current.clear();
-    cursorsRef.current.set(page, cursor ?? null);
-    // filterKey is derived from exactly the fields that invalidate cursors.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterKey]);
+    syncPage(meta);
+  }, [syncPage, meta]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Doctor | null>(null);
@@ -219,23 +168,7 @@ export default function DoctorsView({ role }: { role: string | null | undefined 
     [canUpdate, canDelete, deleteMutation],
   );
 
-  const activeFilters =
-    (query.search ? 1 : 0) +
-    (query.specialization ? 1 : 0) +
-    (query.hospital ? 1 : 0) +
-    (query.from || query.to ? 1 : 0);
-
   const doctors = data?.data ?? [];
-
-  /** Walk to a page via its remembered cursor (page 1 carries none). */
-  const gotoPage = (target: number) => {
-    const clamped = Math.max(1, target);
-    if (clamped === page) return;
-    setParams({
-      page: clamped > 1 ? String(clamped) : null,
-      cursor: cursorsRef.current.get(clamped) ?? null,
-    });
-  };
 
   const doctorCard = (doctor: Doctor) => (
     <DoctorCard

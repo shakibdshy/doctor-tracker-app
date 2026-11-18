@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 
 import { apiErrorMessage } from "@/lib/api";
+import { patientKeys } from "@/features/patients/queries";
 
 import {
   deleteDoctor,
@@ -21,14 +22,14 @@ import {
 
 /**
  * Query-key factory: every doctors cache entry is addressed through this.
- * Note the singular `detail` prefix — list invalidation (`all`) does not
- * touch detail caches, matching the previous literal keys.
+ * All keys share the `["doctors"]` root so one invalidation pass (save,
+ * delete) also refreshes detail caches and the roster options pickers.
  */
 export const doctorKeys = {
   all: ["doctors"] as const,
   list: (query: DoctorListQuery) => ["doctors", query] as const,
   options: () => ["doctors", "options"] as const,
-  detail: (id: string) => ["doctor", id] as const,
+  detail: (id: string) => ["doctors", "detail", id] as const,
 };
 
 export function useDoctors(query: DoctorListQuery) {
@@ -61,6 +62,10 @@ export function useDeleteDoctor() {
     onSuccess: (_result, doctor) => {
       toast.success(`${doctor.name} deleted — their patients are now unassigned`);
       void queryClient.invalidateQueries({ queryKey: doctorKeys.all });
+      // The server just unassigned all of this doctor's patients; the
+      // patients caches (lists + the doctor-detail assignment lists) must
+      // not keep showing them as assigned.
+      void queryClient.invalidateQueries({ queryKey: patientKeys.all });
     },
     onError: (deleteError) => {
       toast.error(apiErrorMessage(deleteError));

@@ -21,13 +21,14 @@ import {
 
 /**
  * Query-key factory: every patients cache entry is addressed through this.
- * Note the singular `detail` prefix — the API's keyset-list invalidation
- * (`all`) does not touch detail caches, matching the previous literal keys.
+ * All keys share the `["patients"]` root so one invalidation pass (save,
+ * unassign, delete, a doctor deletion that unassigned its patients) also
+ * refreshes detail caches and keeps derived lists honest.
  */
 export const patientKeys = {
   all: ["patients"] as const,
   list: (query: PatientListQuery) => ["patients", query] as const,
-  detail: (id: string | undefined) => ["patient", id] as const,
+  detail: (id: string | undefined) => ["patients", "detail", id] as const,
 };
 
 type PatientPage = { data: Patient[]; meta?: PageMeta };

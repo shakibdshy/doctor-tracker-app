@@ -24,7 +24,7 @@ import { TEAM_ROLES } from "@doctor-tracker-app/auth/team-user";
 import { BanIcon, PlusIcon, ShieldCheckIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { initialsOf } from "@/components/nav-items";
+import { initialsOf } from "@/lib/format";
 
 import type { TeamUser } from "../api";
 import { useBanTeamUser, useSetTeamRole, useTeamUsers, useUnbanTeamUser } from "../queries";

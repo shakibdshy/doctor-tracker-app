@@ -21,12 +21,3 @@ export const NAV: ReadonlyArray<{
   { href: "/patients", label: "Patients", capability: "patient:read", icon: HeartPulseIcon },
   { href: "/team", label: "Team", capability: "team:manage", icon: ShieldCheckIcon },
 ];
-
-export function initialsOf(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join("");
-}

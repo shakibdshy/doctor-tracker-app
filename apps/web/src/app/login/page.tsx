@@ -1,7 +1,7 @@
 import { HeartPulseIcon, ShieldCheckIcon, StethoscopeIcon } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import SignInForm from "@/components/sign-in-form";
+import SignInForm from "@/features/auth/components/sign-in-form";
 import { getSessionServer } from "@/lib/session";
 
 export const metadata = { title: "Sign in — Doctor Tracker" };

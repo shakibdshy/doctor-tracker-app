@@ -10,9 +10,9 @@ import { Skeleton } from "@doctor-tracker-app/ui/components/skeleton";
 import { ChevronDownIcon } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
+import { initialsOf } from "@/lib/format";
 
 import { AccountMenuItems } from "./account-menu";
-import { initialsOf } from "./nav-items";
 
 export default function UserMenu() {
   const { data: session, isPending } = authClient.useSession();

@@ -12,10 +12,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+import { initialsOf } from "@/lib/format";
 
 import { AccountMenuItems } from "./account-menu";
 import { ModeToggle } from "./mode-toggle";
-import { initialsOf, NAV } from "./nav-items";
+import { NAV } from "./nav-items";
 
 /**
  * Desktop navigation rail: deep-pine panel with the serif wordmark,

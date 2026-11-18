@@ -5,7 +5,7 @@ import { StatCard } from "@doctor-tracker-app/ui/components/stat-card";
 import { Skeleton } from "@doctor-tracker-app/ui/components/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@doctor-tracker-app/ui/components/empty";
 import { Button } from "@doctor-tracker-app/ui/components/button";
-import { ChartBarIcon, ChartPieIcon, StethoscopeIcon, TrendingUpIcon, RefreshCcwIcon, UserPlusIcon, UsersIcon, UserXIcon } from "lucide-react";
+import { ChartBarIcon, ChartPieIcon, StethoscopeIcon, RefreshCcwIcon, UserPlusIcon, UsersIcon, UserXIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { useDashboard } from "../queries";

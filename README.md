@@ -10,7 +10,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white)
 ![Bun](https://img.shields.io/badge/Bun-Turborepo-000000?logo=bun&logoColor=white)
 ![better-auth](https://img.shields.io/badge/better--auth-RBAC-6D28D9)
-![Tests](https://img.shields.io/badge/tests-40_passing-22C55E)
+![Tests](https://img.shields.io/badge/tests-44_passing-22C55E)
 
 **Live demo: [https://doc-tracker-web-one.vercel.app](https://doc-tracker-web-one.vercel.app/)**
 
@@ -42,6 +42,7 @@ Open the [live demo](https://doc-tracker-web-one.vercel.app/) and sign in with e
 - **Team & roles** — Admin-provisioned users, role assignment, ban / unban, backed by the better-auth admin plugin and a pure, unit-tested capability policy.
 - **Craft** — a distinctive editorial design system (Fraunces display + Schibsted Grotesk body, warm bone / evergreen tokens), full light **and** dark themes, custom date-picker, skeleton loaders, empty / error states with retry, URL-persisted filters, and keyboard-accessible dialogs, selects and tables.
 - **Fully responsive** — data tables on desktop collapse to action-rich cards on mobile; every surface verified at 390 / 768 / 1024 / 1440px in both themes with zero horizontal overflow.
+- **Hardened by default** — nonce-based CSP (XSS), first-party SameSite cookies + origin checks (CSRF), `frame-ancestors 'none'` (clickjacking), and a 15-minute sliding idle session on both client and server.
 
 ---
 
@@ -169,6 +170,26 @@ List endpoints paginate by keyset cursor (ADR-0003): `cursor` resumes a listing,
 
 ---
 
+## Security
+
+Defences against the classic browser attack trio, plus where patient data can and cannot travel.
+
+**XSS.** Every page ships a nonce-based Content-Security-Policy (`script-src 'self' 'nonce-…' 'strict-dynamic'`, generated per request by `src/proxy.ts`): an injected inline script — the payload shape of a reflected XSS — is refused execution even if attacker markup slips through React's escaping. The repo's only `dangerouslySetInnerHTML` injects a *static* chart-theme stylesheet, covered by `style-src`.
+
+**CSRF.** All API traffic is same-origin by construction ([decision 2](#2-first-party-cookies-via-nextjs-rewrites-instead-of-cross-origin-cors)): the session cookie is first-party, `SameSite=Lax`, `httpOnly`, and better-auth validates Origin/Fetch-Metadata on state-changing auth calls. Sign-in is rate-limited (3 attempts / 10 s).
+
+**Clickjacking.** `frame-ancestors 'none'` in both the web CSP and the API's helmet config, with `X-Frame-Options: DENY` as the legacy backstop — the portal refuses to be framed anywhere. See [ADR-0004](docs/adr/0004-security-headers-and-idle-session.md).
+
+**Sessions.** A sliding 15-minute idle window enforced on both ends from one shared constant: the server session (and cookie) dies after 15 idle minutes, and a client idle guard signs out proactively with a toast — an abandoned tab can't outlive its session, and neither can a stolen cookie.
+
+### Patient-data hygiene
+
+- **Out of `localStorage`.** The portal reads and writes zero web storage — the session lives in an httpOnly cookie that even a successful XSS cannot read, and view state lives in TanStack Query memory and the URL.
+- **Out of URLs.** List URLs persist only non-identifying filters (condition, doctor id, date range, page) — the patient name/phone search input is deliberately excluded from URL persistence. `Referrer-Policy: no-referrer` keeps query strings off the `Referer` header, and the browser never talks to any origin but the app's own.
+- **Out of logs.** The API runs no request-logging middleware; the central error handler logs only the error object behind opaque 500s — never request bodies — and 4xx envelopes name fields, not values. Nothing a user types is written anywhere durable except the records they meant to create.
+
+---
+
 ## Getting started
 
 ### Prerequisites
@@ -244,7 +265,7 @@ bun run check-types  # strict TypeScript across all packages
 
 ## Testing & verification
 
-- **40 automated tests** (`bun test`): doctor / patient / dashboard services against `mongodb-memory-server` (search, filters, keyset pagination — cursor walks, id tie-breaks, filter composition, malformed cursors — date bounds, unassign-on-delete, duplicate email → 409, aggregation shape, cache TTL/invalidation, `IXSCAN` assertions) and the role-policy matrix.
+- **44 automated tests** (`bun test`): doctor / patient / dashboard services against `mongodb-memory-server` (search, filters, keyset pagination — cursor walks, id tie-breaks, filter composition, malformed cursors — date bounds, unassign-on-delete, duplicate email → 409, aggregation shape, cache TTL/invalidation, `IXSCAN` assertions), the role-policy matrix, the sliding-session semantics (15-minute expiry at sign-in, refresh-past-throttle slide, expired-session cleanup) and the API's security headers (CSP `default-src 'none'`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`).
 - **End-to-end browser pass** (Playwright, fresh incognito-equivalent contexts): route guards, both role logins, every filter + URL persistence, pagination, create / edit / delete / unassign with confirm dialogs and optimistic updates, team create / ban / unban, staff 403s at API *and* UI level, dashboard charts, and mobile card layouts at 390px — in light and dark themes, with zero console errors and zero horizontal overflow.
 
 ---

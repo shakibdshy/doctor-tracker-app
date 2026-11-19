@@ -37,6 +37,7 @@ export function useIdleSession() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    let signingOut = false;
     const clearTimer = () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -45,6 +46,10 @@ export function useIdleSession() {
     };
 
     const signOut = () => {
+      // The timer and the visibility check can both reach for the same
+      // expiry — sign out exactly once.
+      if (signingOut) return;
+      signingOut = true;
       clearTimer();
       toast.info("Signed out due to inactivity");
       authClient.signOut({
@@ -58,6 +63,7 @@ export function useIdleSession() {
             // The redirect is the safe outcome even if the call fails; the
             // server session has its own idle window behind it.
             router.replace("/login");
+            router.refresh();
           },
         },
       });

@@ -6,7 +6,10 @@ import helmet from "helmet";
  * renders nothing (CSP `default-src 'none'`, `frame-ancestors 'none'`),
  * refuses framing outright (XFO DENY), and sends no referrer. HSTS and
  * no-sniff keep helmet's defaults; the web app's headers live in Next
- * (next.config.ts + proxy.ts) — this is the API layer only.
+ * (next.config.ts + proxy.ts) — this is the API layer only. (Next's
+ * static-header list also stamps the identical XFO/Referrer-Policy values
+ * on rewritten /api/* responses at the edge; values agree, so ownership is
+ * belt-and-suspenders rather than a conflict.)
  */
 export const securityHeaders = helmet({
   contentSecurityPolicy: {

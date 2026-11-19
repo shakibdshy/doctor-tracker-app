@@ -51,6 +51,8 @@ export default function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Everything that renders HTML; static assets and rewritten API traffic excluded.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Everything that renders HTML; static assets and rewritten API traffic
+  // excluded. Lookaheads pin to segment boundaries so a future route like
+  // /api-docs would still get the CSP.
+  matcher: ["/((?!api(?:/|$)|_next/static/|_next/image/|favicon\\.ico$).*)"],
 };

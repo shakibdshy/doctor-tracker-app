@@ -16,3 +16,4 @@ The portal handles patient data but shipped no Content-Security-Policy — the h
 - Dev and prod CSP differ only in dev allowances (`unsafe-eval` for React refresh, `ws:` for HMR); production adds `upgrade-insecure-requests`.
 - Anything that injects its own inline script must carry the nonce: next-themes' theme bootstrap gets it threaded through the root layout (`x-nonce` request header set by the proxy), because under `strict-dynamic` Next does not stamp third-party inline scripts and hash-based fallbacks are ignored.
 - The web idle guard imports the constants via the `@doctor-tracker-app/auth/session` subpath, never the package root — the root re-exports `createAuth`, whose better-auth/MongoDB dependency tree must not reach the browser bundle.
+- Reading `headers()` in the root layout (for the nonce) opts every route out of static prerendering — inherent to Next's official nonce pattern and moot for an auth-gated portal where every page is already session-checked.

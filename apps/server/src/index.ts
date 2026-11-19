@@ -3,10 +3,10 @@ import { toNodeHandler } from "better-auth/node";
 import compression from "compression";
 import cors from "cors";
 import express from "express";
-import helmet from "helmet";
 
 import { ok } from "./http/envelope";
 import { errorHandler, notFoundHandler } from "./http/error-handler";
+import { securityHeaders } from "./middleware/security";
 import v1Router from "./routes/v1";
 import { ENV } from "./env.server";
 import { auth } from "./services";
@@ -16,7 +16,7 @@ const PORT = ENV.PORT ?? 3000;
 const app = express();
 
 app.disable("x-powered-by");
-app.use(helmet());
+app.use(securityHeaders);
 app.use(compression());
 app.use(
   cors({

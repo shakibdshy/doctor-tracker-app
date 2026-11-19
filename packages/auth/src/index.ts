@@ -4,6 +4,7 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { admin } from "better-auth/plugins/admin";
 
 import { accessControl, roles } from "./policy";
+import { SESSION_IDLE_SECONDS, SESSION_REFRESH_SECONDS } from "./session";
 
 export {
   accessControl,
@@ -14,6 +15,8 @@ export {
   type Capability,
   type RoleId,
 } from "./policy";
+
+export { SESSION_IDLE_SECONDS, SESSION_REFRESH_SECONDS } from "./session";
 
 export type AuthConfig = {
   BETTER_AUTH_URL: string;
@@ -41,6 +44,14 @@ export function createAuth(
       customRules: {
         "/sign-in/email": { window: 10, max: 3 },
       },
+    },
+    session: {
+      // Sliding idle window (ADR-0004): better-auth refreshes on session
+      // use when now - updatedAt >= updateAge, re-issuing the cookie with
+      // a fresh maxAge — so a stolen cookie goes inert after 15 idle
+      // minutes, while an active user never sees a re-prompt.
+      expiresIn: SESSION_IDLE_SECONDS,
+      updateAge: SESSION_REFRESH_SECONDS,
     },
     plugins: [
       admin({

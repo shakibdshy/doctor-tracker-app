@@ -8,8 +8,16 @@ import * as React from "react";
 /**
  * App-root providers: TanStack Query cache, theme (class strategy), toasts.
  * Lives with the root layout — this is application wiring, not feature UI.
+ * `nonce` threads the CSP nonce (src/proxy.ts) into next-themes' inline
+ * theme script, the one inline script Next does not stamp itself.
  */
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({
+  children,
+  nonce,
+}: {
+  children: React.ReactNode;
+  nonce?: string;
+}) {
   const [queryClient] = React.useState(
     () =>
       new QueryClient({
@@ -25,7 +33,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+        nonce={nonce}
+      >
         {children}
         <Toaster richColors />
       </ThemeProvider>

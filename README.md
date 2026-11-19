@@ -180,7 +180,7 @@ Defences against the classic browser attack trio, plus where patient data can an
 
 **Clickjacking.** `frame-ancestors 'none'` in both the web CSP and the API's helmet config, with `X-Frame-Options: DENY` as the legacy backstop — the portal refuses to be framed anywhere. See [ADR-0004](docs/adr/0004-security-headers-and-idle-session.md).
 
-**Sessions.** A sliding 15-minute idle window enforced on both ends from one shared constant: the server session (and cookie) dies after 15 idle minutes, and a client idle guard signs out proactively with a toast — an abandoned tab can't outlive its session, and neither can a stolen cookie.
+**Sessions.** A sliding 15-minute idle window enforced on both ends from one shared constant: the server session (and cookie) dies after 15 idle minutes, and a client idle guard signs out proactively with a toast — an abandoned tab can't outlive its session, and neither can a stolen cookie. If a session ever lapses mid-action anyway (a visible tab whose user only scrolls), the client's fetch wrapper recovers: it signs out and returns to the sign-in page instead of surfacing failed queries.
 
 ### Patient-data hygiene
 
